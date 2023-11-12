@@ -19,10 +19,6 @@ async fn axum(#[shuttle_shared_db::MongoDb] db: Database) -> shuttle_axum::Shutt
     Ok(router.into())
 }
 
-// #[derive(Clone)]
-// pub struct AppState {
-//     database: Database,
-// }
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Product {
     pub name: String,
