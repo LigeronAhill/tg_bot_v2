@@ -17,7 +17,7 @@ tasks:
       - cargo tarpaulin --ignore-tests
 
   dep:
-    cnds:
+    cmds:
       - cargo shuttle deploy
 
   run:
