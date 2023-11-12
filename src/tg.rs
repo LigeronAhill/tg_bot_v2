@@ -4,10 +4,8 @@ use crate::models;
 
 pub async fn get_updates_webhook(
     State(_app_state): State<models::AppState>,
-    Json(updates): Json<Vec<models::tg::Update>>,
+    Json(update): Json<models::tg::Update>,
 ) -> impl IntoResponse {
-    for update in updates {
-        println!("{:#?}", update)
-    }
+    println!("{:#?}", update);
     StatusCode::OK
 }
