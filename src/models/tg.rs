@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Update {
@@ -946,4 +947,36 @@ pub struct InputInvoiceMessageContent {
 pub struct LabeledPrice {
     pub label: String,
     pub amount: i64,
+}
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MessageToBot {
+    pub chat_id: i64,
+    pub message_thread_id: Option<i64>,
+    pub text: String,
+    pub parse_mode: Option<String>,
+    pub entities: Option<Vec<MessageEntity>>,
+    pub disable_web_page_preview: Option<bool>,
+    pub disable_notification: Option<bool>,
+    pub protect_content: Option<bool>,
+    pub reply_to_message_id: Option<i64>,
+    pub allow_sending_without_reply: Option<bool>,
+    pub reply_markup: Option<ReplyMarkup>,
+}
+impl MessageToBot {
+    pub fn new(chat_id: i64, text: String) -> Self {
+        MessageToBot {
+            chat_id,
+            message_thread_id: None,
+            text,
+            parse_mode: None,
+            entities: None,
+            disable_web_page_preview: None,
+            disable_notification: None,
+            protect_content: None,
+            reply_to_message_id: None,
+            allow_sending_without_reply: None,
+            reply_markup: None,
+        }
+    }
 }
