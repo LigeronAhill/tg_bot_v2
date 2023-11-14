@@ -1,12 +1,25 @@
 use crate::models::{AppState, Product};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use mongodb::bson::doc;
-use serde_json::json;
+use serde_json::{json, Value};
+use teloxide::requests::Requester;
 
 pub async fn health() -> impl IntoResponse {
     StatusCode::OK
 }
 
+pub async fn mswebhook(
+    State(state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> impl IntoResponse {
+    let text: String = serde_json::from_value(payload).unwrap();
+    state
+        .bot
+        .send_message(state.test_id, text)
+        .await
+        .expect("cant send msg");
+    StatusCode::OK
+}
 pub async fn create_product(
     State(app_state): State<AppState>,
     Json(payload): Json<Product>,

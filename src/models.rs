@@ -4,6 +4,7 @@ pub mod moy_sklad;
 pub mod wordpress;
 use mongodb::{bson::oid::ObjectId, Database};
 use serde::{Deserialize, Serialize};
+use teloxide::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Product {
@@ -27,4 +28,6 @@ impl Product {
 #[derive(Clone)]
 pub struct AppState {
     pub db: Database,
+    pub bot: Bot,
+    pub test_id: ChatId,
 }
