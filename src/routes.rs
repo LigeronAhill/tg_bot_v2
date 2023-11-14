@@ -22,7 +22,7 @@ pub async fn telegram(
                 msg.chat.id,
                 format!("Я только что получила это: {}", msg.text),
             );
-            client.post(url).json(&ans).send().await;
+            let _ = client.post(url).json(&ans).send().await;
             StatusCode::OK
         }
         None => StatusCode::OK,
