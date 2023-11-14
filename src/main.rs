@@ -2,14 +2,14 @@ use axum::routing::{delete, get, post, put};
 use axum::Router;
 use mongodb::Database;
 use shuttle_secrets::SecretStore;
-// use teloxide::dispatching::dialogue::InMemStorage;
+use teloxide::dispatching::dialogue::InMemStorage;
 use teloxide::prelude::*;
-// use tg::{schema, State};
+use tg::{schema, State};
 
 pub mod db;
 pub mod models;
 pub mod routes;
-// pub mod tg;
+pub mod tg;
 
 #[shuttle_runtime::main]
 async fn axum(
@@ -25,20 +25,20 @@ async fn axum(
         .expect("cant parse id");
     let test_id = ChatId(my_id);
     let bot = Bot::new(token);
-    // Dispatcher::builder(bot.clone(), schema())
-    //     .dependencies(dptree::deps![InMemStorage::<State>::new()])
-    //     .enable_ctrlc_handler()
-    //     .build()
-    //     .dispatch()
-    //     .await;
-    teloxide::repl(bot.clone(), |message: Message, bot: Bot| async move {
-        if let Some(text) = message.text() {
-            bot.send_message(message.chat.id, format!("Получила это: {}\n", text))
-                .await?;
-        }
-        respond(())
-    })
-    .await;
+    Dispatcher::builder(bot.clone(), schema())
+        .dependencies(dptree::deps![InMemStorage::<State>::new()])
+        .enable_ctrlc_handler()
+        .build()
+        .dispatch()
+        .await;
+    // teloxide::repl(bot.clone(), |message: Message, bot: Bot| async move {
+    //     if let Some(text) = message.text() {
+    //         bot.send_message(message.chat.id, format!("Получила это: {}\n", text))
+    //             .await?;
+    //     }
+    //     respond(())
+    // })
+    // .await;
 
     let app_state = models::AppState { db, bot, test_id };
     let router = Router::new()

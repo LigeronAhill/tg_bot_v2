@@ -70,7 +70,7 @@ pub fn schema() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 'stat
 }
 
 async fn start(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
-    bot.send_message(msg.chat.id, "Let's start! What's your full name?")
+    bot.send_message(msg.chat.id, "Введите название товара")
         .await?;
     dialogue.update(State::ReceiveFullName).await?;
     Ok(())
@@ -104,7 +104,7 @@ async fn receive_full_name(bot: Bot, dialogue: MyDialogue, msg: Message) -> Hand
             let products = ["Apple", "Banana", "Orange", "Potato"]
                 .map(|product| InlineKeyboardButton::callback(product, product));
 
-            bot.send_message(msg.chat.id, "Select a product:")
+            bot.send_message(msg.chat.id, "Выберите цвет")
                 .reply_markup(InlineKeyboardMarkup::new([products]))
                 .await?;
             dialogue
