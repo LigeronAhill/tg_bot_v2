@@ -1,6 +1,7 @@
-use crate::models::{
-    tg::{MessageToBot, Update},
-    AppState, Product,
+use crate::{
+    db::{self, find_products},
+    models::{tg::Update, AppState, Product},
+    tg,
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use mongodb::bson::doc;
@@ -18,10 +19,7 @@ pub async fn telegram(
     let url = format!("https://api.telegram.org/bot{}/sendMessage", state.token);
     match payload.message {
         Some(msg) => {
-            let ans = MessageToBot::new(
-                msg.chat.id,
-                format!("Я только что получила это: {}", msg.text),
-            );
+            let ans = tg::message_unwrap(msg);
             let _ = client.post(url).json(&ans).send().await;
             StatusCode::OK
         }
@@ -35,11 +33,18 @@ pub async fn mswebhook(
     let _text: String = serde_json::from_value(payload).unwrap();
     StatusCode::OK
 }
+pub async fn ymwebhook(
+    State(_state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> impl IntoResponse {
+    let _text: String = serde_json::from_value(payload).unwrap();
+    StatusCode::OK
+}
 pub async fn create_product(
     State(app_state): State<AppState>,
     Json(payload): Json<Product>,
 ) -> impl IntoResponse {
-    let collection = app_state.db.collection::<Product>("products");
+    let collection = app_state.db.collection::<Product>(db::PRODUCT_COL);
     match collection.insert_one(payload, None).await {
         Ok(result) => {
             match collection
@@ -53,8 +58,12 @@ pub async fn create_product(
         Err(_) => Err(Json(json!({"status": "error"}))),
     }
 }
-pub async fn get_products() -> impl IntoResponse {
-    StatusCode::OK
+pub async fn get_products(State(app_state): State<AppState>) -> impl IntoResponse {
+    let result: Vec<Product> = vec![];
+    match find_products(&app_state.db).await {
+        Ok(products) => Json(products),
+        Err(_) => Json(result),
+    }
 }
 pub async fn get_product_by_id() -> impl IntoResponse {
     StatusCode::OK

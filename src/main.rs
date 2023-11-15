@@ -21,6 +21,7 @@ async fn axum(
         .route("/health", get(routes::health))
         .route("/api/v1/telegram", post(routes::telegram))
         .route("/api/v1/mswebhook", post(routes::mswebhook))
+        .route("/api/v1/ymwebhook", post(routes::ymwebhook))
         .route("/api/v1/create", post(routes::create_product))
         .route("/api/v1/read", get(routes::get_products))
         .route("/api/v1/read/:id", get(routes::get_product_by_id))
