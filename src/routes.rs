@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::models::{product::Product, tg::Update, AppState};
 
@@ -86,9 +86,10 @@ pub async fn delete_product(
     app_state.storage.delete_product(id).await?;
     Ok(())
 }
-// pub async fn temp_ids(State(app_state): State<AppState>) -> impl IntoResponse {
-//     match app_state.storage.find_all_ids().await {
-//         Ok(ids) => Json(json!(ids)),
-//         Err(_) => Json(json!("error")),
-//     }
-// }
+pub async fn get_product_by_name(
+    State(app_state): State<AppState>,
+    Path(name): Path<String>,
+) -> Result<Json<Vec<Product>>> {
+    let result = app_state.storage.find_product_by_name(name).await?;
+    Ok(Json(result))
+}

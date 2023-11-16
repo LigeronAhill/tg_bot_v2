@@ -32,9 +32,9 @@ async fn axum(
         .route("/api/v1/create", post(routes::create_product))
         .route("/api/v1/read", get(routes::get_products))
         .route("/api/v1/read/:id", get(routes::get_product_by_id))
+        .route("/api/v1/read/:name", get(routes::get_product_by_name))
         .route("/api/v1/update/:id", put(routes::update_product))
         .route("/api/v1/delete/:id", delete(routes::delete_product))
-        // .route("/ids", get(routes::temp_ids))
         .with_state(app_state);
 
     Ok(router.into())

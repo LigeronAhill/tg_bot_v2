@@ -76,18 +76,6 @@ impl Storage {
         }
         Ok(result)
     }
-    // pub async fn find_all_ids(&self) -> Result<Vec<String>> {
-    //     let mut cursor = self
-    //         .product
-    //         .find(None, None)
-    //         .await
-    //         .map_err(|_| MyError::DbError)?;
-    //     let mut result: Vec<String> = vec![];
-    //     while let Some(product) = cursor.try_next().await.map_err(|_| MyError::DbError)? {
-    //         result.push(product.id.unwrap().to_string())
-    //     }
-    //     Ok(result)
-    // }
     pub async fn find_product_by_id(&self, id: String) -> Result<Product> {
         let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
         match self.product.find_one(doc! {"_id": oid}, None).await {
@@ -96,17 +84,16 @@ impl Storage {
         }
     }
     pub async fn find_product_by_name(&self, name: String) -> Result<Vec<Product>> {
-        // let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
-        let mut result = self
+        let mut cursor = self
             .product
             .find(doc! {"name":{"$regex": name, "$options": "i"}}, None)
             .await
             .map_err(|_| MyError::DbError)?;
-        let mut result_vec: Vec<Product> = vec![];
-        while let Some(product) = result.try_next().await.map_err(|_| MyError::DbError)? {
-            result_vec.push(product)
+        let mut result: Vec<Product> = vec![];
+        while let Some(product) = cursor.try_next().await.map_err(|_| MyError::DbError)? {
+            result.push(product)
         }
-        Ok(result_vec)
+        Ok(result)
     }
     pub async fn update_product(&self, id: String, upd_product: Product) -> Result<()> {
         let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
