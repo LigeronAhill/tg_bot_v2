@@ -76,18 +76,18 @@ impl Storage {
         }
         Ok(result)
     }
-    pub async fn find_all_ids(&self) -> Result<Vec<String>> {
-        let mut cursor = self
-            .product
-            .find(None, None)
-            .await
-            .map_err(|_| MyError::DbError)?;
-        let mut result: Vec<String> = vec![];
-        while let Some(product) = cursor.try_next().await.map_err(|_| MyError::DbError)? {
-            result.push(product.id.unwrap().to_string())
-        }
-        Ok(result)
-    }
+    // pub async fn find_all_ids(&self) -> Result<Vec<String>> {
+    //     let mut cursor = self
+    //         .product
+    //         .find(None, None)
+    //         .await
+    //         .map_err(|_| MyError::DbError)?;
+    //     let mut result: Vec<String> = vec![];
+    //     while let Some(product) = cursor.try_next().await.map_err(|_| MyError::DbError)? {
+    //         result.push(product.id.unwrap().to_string())
+    //     }
+    //     Ok(result)
+    // }
     pub async fn find_product_by_id(&self, id: String) -> Result<Product> {
         let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
         match self.product.find_one(doc! {"_id": oid}, None).await {

@@ -86,9 +86,9 @@ pub async fn delete_product(
     app_state.storage.delete_product(id).await?;
     Ok(())
 }
-pub async fn temp_ids(State(app_state): State<AppState>) -> impl IntoResponse {
-    match app_state.storage.find_all_ids().await {
-        Ok(ids) => Json(json!(ids)),
-        Err(_) => Json(json!("error")),
-    }
-}
+// pub async fn temp_ids(State(app_state): State<AppState>) -> impl IntoResponse {
+//     match app_state.storage.find_all_ids().await {
+//         Ok(ids) => Json(json!(ids)),
+//         Err(_) => Json(json!("error")),
+//     }
+// }
