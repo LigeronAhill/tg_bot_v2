@@ -34,6 +34,7 @@ async fn axum(
         .route("/api/v1/read/:id", get(routes::get_product_by_id))
         .route("/api/v1/update/:id", put(routes::update_product))
         .route("/api/v1/delete/:id", delete(routes::delete_product))
+        .route("/ids", get(routes::temp_ids))
         .with_state(app_state);
 
     Ok(router.into())
