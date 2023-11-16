@@ -36,7 +36,7 @@ pub async fn find_products(db: &Database) -> Result<Vec<Product>> {
 }
 pub async fn find_product_by_id(
     app_state: AppState,
-    id: Bson,
+    id: String,
 ) -> Result<Json<Product>, Json<Value>> {
     let collection = app_state.db.collection::<Product>(PRODUCT_COL);
     match collection.find_one(doc! {"_id": id}, None).await {

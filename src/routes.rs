@@ -51,7 +51,7 @@ pub async fn create_product(
 ) -> impl IntoResponse {
     let collection = app_state.db.collection::<Product>(db::PRODUCT_COL);
     match collection.insert_one(payload, None).await {
-        Ok(result) => find_product_by_id(app_state, result.inserted_id).await,
+        Ok(result) => find_product_by_id(app_state, result.inserted_id.to_string()).await,
         Err(_) => Err(Json(json!({"status": "error creating product"}))),
     }
 }
@@ -64,7 +64,7 @@ pub async fn get_products(State(app_state): State<AppState>) -> impl IntoRespons
 }
 pub async fn get_product_by_id(
     State(app_state): State<AppState>,
-    Path(id): Path<Bson>,
+    Path(id): Path<String>,
 ) -> impl IntoResponse {
     find_product_by_id(app_state, id).await
 }
