@@ -76,10 +76,33 @@ impl Storage {
         Ok(result)
     }
     pub async fn find_product_by_id(&self, id: String) -> Result<Product> {
-        let oid = ObjectId::parse_str(id).unwrap();
+        let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
         match self.product.find_one(doc! {"_id": oid}, None).await {
             Ok(Some(product)) => Ok(product),
             _ => Err(MyError::DbError),
+        }
+    }
+    pub async fn update_product(&self, id: String, upd_product: Product) -> Result<()> {
+        let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
+        let filter = doc! {"_id": oid};
+        let new_product = doc! {
+            "$set":
+            {
+                "name": upd_product.name,
+                "price": upd_product.price,
+                "stock": upd_product.stock,
+            },
+        };
+        match self.product.update_one(filter, new_product, None).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(MyError::DbError),
+        }
+    }
+    pub async fn delete_product(&self, id: String) -> Result<()> {
+        let oid = ObjectId::parse_str(id).map_err(|_| MyError::DbError)?;
+        match self.product.delete_one(doc! {"_id": oid}, None).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(MyError::DbError),
         }
     }
 }

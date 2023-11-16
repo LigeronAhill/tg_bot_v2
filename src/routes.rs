@@ -72,14 +72,17 @@ pub async fn get_product_by_id(
 }
 
 pub async fn update_product(
-    State(_app_state): State<AppState>,
-    Path(_id): Path<String>,
-) -> impl IntoResponse {
-    StatusCode::OK
+    State(app_state): State<AppState>,
+    Path(id): Path<String>,
+    Json(upd_product): Json<Product>,
+) -> Result<()> {
+    app_state.storage.update_product(id, upd_product).await?;
+    Ok(())
 }
 pub async fn delete_product(
-    State(_app_state): State<AppState>,
-    Path(_id): Path<String>,
-) -> impl IntoResponse {
-    StatusCode::OK
+    State(app_state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<()> {
+    app_state.storage.delete_product(id).await?;
+    Ok(())
 }
