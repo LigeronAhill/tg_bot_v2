@@ -49,6 +49,7 @@ impl Storage {
             .await
             .map_err(|_| MyError::DbError)?;
         let result = self
+            .product
             .find_product_by_id(inserted_product.inserted_id.to_string())
             .await
             .map_err(|_| MyError::DbError)?;
