@@ -9,7 +9,6 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use mongodb::bson::Bson;
 use serde_json::{json, Value};
 
 pub async fn health() -> impl IntoResponse {
