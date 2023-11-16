@@ -1,10 +1,12 @@
 use axum::routing::{delete, get, post, put};
 use axum::Router;
-use models::Bot;
+use db::Storage;
 use mongodb::Database;
 use shuttle_secrets::SecretStore;
+use tg::Bot;
 
 pub mod db;
+pub mod errors;
 pub mod models;
 pub mod routes;
 pub mod tg;
@@ -14,10 +16,14 @@ async fn axum(
     #[shuttle_shared_db::MongoDb] db: Database,
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> shuttle_axum::ShuttleAxum {
-    db::create_index_on_product_name(&db).await;
     let token = secret_store.get("TG_TOKEN").expect("token not set!");
+    let storage = Storage::new(&db).await;
+    storage
+        .name_index_create()
+        .await
+        .expect("can't create index!");
     let bot = Bot::new(token);
-    let app_state = models::AppState { db, bot };
+    let app_state = models::AppState { storage, bot };
     let router = Router::new()
         .route("/health", get(routes::health))
         .route("/api/v1/telegram", post(routes::telegram))

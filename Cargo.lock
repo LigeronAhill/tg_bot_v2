@@ -247,6 +247,7 @@ dependencies = [
  "ahash",
  "base64 0.13.1",
  "bitvec",
+ "chrono",
  "hex",
  "indexmap 1.9.3",
  "js-sys",
@@ -255,6 +256,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
+ "serde_with 1.14.0",
  "time",
  "uuid",
 ]
@@ -300,8 +302,10 @@ checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets",
 ]
 
@@ -3131,6 +3135,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "bson",
+ "chrono",
  "futures",
  "mongodb",
  "reqwest",
@@ -3142,6 +3148,7 @@ dependencies = [
  "shuttle-secrets",
  "shuttle-shared-db",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

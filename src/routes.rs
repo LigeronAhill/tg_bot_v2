@@ -1,15 +1,13 @@
-use crate::{
-    db::{self, find_product_by_id, find_products},
-    models::{tg::Update, AppState, Product},
-    tg,
-};
+use crate::errors::Result;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
+
+use crate::models::{product::Product, tg::Update, AppState};
 
 pub async fn health() -> impl IntoResponse {
     StatusCode::OK
@@ -21,7 +19,16 @@ pub async fn telegram(
 ) -> impl IntoResponse {
     match payload.message {
         Some(msg) => {
-            let text = tg::message_unwrap(&msg);
+            let words = msg.text.split_whitespace();
+            let mut color: i32 = 0;
+            let mut col = String::new();
+            for word in words {
+                match word.parse::<i32>() {
+                    Ok(number) => color = number,
+                    Err(_) => col = word.to_string(),
+                }
+            }
+            let text = format!("Вы искали коллекцию {col} в цвете {color}?");
             match state.bot.send_message(msg.chat.id, text).await {
                 Ok(_) => StatusCode::OK,
                 Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -47,25 +54,21 @@ pub async fn ymwebhook(
 pub async fn create_product(
     State(app_state): State<AppState>,
     Json(payload): Json<Product>,
-) -> impl IntoResponse {
-    let collection = app_state.db.collection::<Product>(db::PRODUCT_COL);
-    match collection.insert_one(payload, None).await {
-        Ok(result) => find_product_by_id(app_state, result.inserted_id.to_string()).await,
-        Err(_) => Err(Json(json!({"status": "error creating product"}))),
-    }
+) -> Result<Json<Product>> {
+    let result = app_state.storage.create_product(payload).await?;
+    Ok(Json(result))
 }
-pub async fn get_products(State(app_state): State<AppState>) -> impl IntoResponse {
-    let result: Vec<Product> = vec![];
-    match find_products(&app_state.db).await {
-        Ok(products) => Json(products),
-        Err(_) => Json(result),
-    }
+
+pub async fn get_products(State(app_state): State<AppState>) -> Result<Json<Vec<Product>>> {
+    let result = app_state.storage.find_all_products().await?;
+    Ok(Json(result))
 }
 pub async fn get_product_by_id(
     State(app_state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    find_product_by_id(app_state, id).await
+) -> Result<Json<Product>> {
+    let result = app_state.storage.find_product_by_id(id).await?;
+    Ok(Json(result))
 }
 
 pub async fn update_product(
