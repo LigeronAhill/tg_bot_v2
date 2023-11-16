@@ -71,13 +71,13 @@ pub async fn get_product_by_id(
 
 pub async fn update_product(
     State(_app_state): State<AppState>,
-    Path(_id): Path<Bson>,
+    Path(_id): Path<String>,
 ) -> impl IntoResponse {
     StatusCode::OK
 }
 pub async fn delete_product(
     State(_app_state): State<AppState>,
-    Path(_id): Path<Bson>,
+    Path(_id): Path<String>,
 ) -> impl IntoResponse {
     StatusCode::OK
 }

@@ -2,7 +2,7 @@ use crate::models::{AppState, Product};
 use anyhow::Result;
 use axum::Json;
 use mongodb::{
-    bson::{doc, Bson},
+    bson::{bson, doc},
     options::IndexOptions,
     Database, IndexModel,
 };
@@ -39,7 +39,7 @@ pub async fn find_product_by_id(
     id: String,
 ) -> Result<Json<Product>, Json<Value>> {
     let collection = app_state.db.collection::<Product>(PRODUCT_COL);
-    match collection.find_one(doc! {"_id": id}, None).await {
+    match collection.find_one(doc! {"_id": bson!(id)}, None).await {
         Ok(Some(product)) => Ok(Json(product)),
         _ => Err(Json(json!({"status": "product not found"}))),
     }
