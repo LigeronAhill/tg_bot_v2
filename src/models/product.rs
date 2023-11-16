@@ -6,7 +6,7 @@ pub struct Product {
     pub id: Option<ObjectId>,
     pub name: String,
     pub price: Option<i32>,
-    pub stock: Option<f64>,
+    pub stock: Option<Vec<f64>>,
 }
 impl Product {
     pub async fn new(name: String) -> Self {
