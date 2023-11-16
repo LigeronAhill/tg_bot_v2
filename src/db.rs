@@ -1,6 +1,12 @@
-use crate::models::Product;
+use crate::models::{AppState, Product};
 use anyhow::Result;
-use mongodb::{bson::doc, options::IndexOptions, Database, IndexModel};
+use axum::Json;
+use mongodb::{
+    bson::{doc, Bson},
+    options::IndexOptions,
+    Database, IndexModel,
+};
+use serde_json::{json, Value};
 
 pub const PRODUCT_COL: &str = "product";
 
@@ -27,4 +33,14 @@ pub async fn find_products(db: &Database) -> Result<Vec<Product>> {
         result.push(product)
     }
     Ok(result)
+}
+pub async fn find_product_by_id(
+    app_state: AppState,
+    id: Bson,
+) -> Result<Json<Product>, Json<Value>> {
+    let collection = app_state.db.collection::<Product>(PRODUCT_COL);
+    match collection.find_one(doc! {"_id": id}, None).await {
+        Ok(Some(product)) => Ok(Json(product)),
+        _ => Err(Json(json!({"status": "product not found"}))),
+    }
 }

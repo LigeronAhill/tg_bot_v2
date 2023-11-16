@@ -1,8 +1,11 @@
-use crate::models::tg::{Message, MessageToBot};
+use crate::models::tg::Message;
 
-pub fn message_unwrap(msg: Message) -> MessageToBot {
-    MessageToBot::new(
-        msg.chat.id,
-        format!("Я только что получила это: {}", msg.text),
-    )
+pub fn message_unwrap(msg: &Message) -> String {
+    let input = &msg.text;
+    let words = input.split_whitespace();
+    let mut result = String::new();
+    for word in words {
+        result.push_str(word)
+    }
+    result
 }

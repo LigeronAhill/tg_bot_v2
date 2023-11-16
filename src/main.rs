@@ -1,5 +1,6 @@
 use axum::routing::{delete, get, post, put};
 use axum::Router;
+use models::Bot;
 use mongodb::Database;
 use shuttle_secrets::SecretStore;
 
@@ -15,8 +16,8 @@ async fn axum(
 ) -> shuttle_axum::ShuttleAxum {
     db::create_index_on_product_name(&db).await;
     let token = secret_store.get("TG_TOKEN").expect("token not set!");
-
-    let app_state = models::AppState { db, token };
+    let bot = Bot::new(token);
+    let app_state = models::AppState { db, bot };
     let router = Router::new()
         .route("/health", get(routes::health))
         .route("/api/v1/telegram", post(routes::telegram))

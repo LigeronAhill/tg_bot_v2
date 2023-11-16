@@ -1,10 +1,15 @@
 use crate::{
-    db::{self, find_products},
+    db::{self, find_product_by_id, find_products},
     models::{tg::Update, AppState, Product},
     tg,
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-use mongodb::bson::doc;
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use mongodb::bson::Bson;
 use serde_json::{json, Value};
 
 pub async fn health() -> impl IntoResponse {
@@ -15,13 +20,13 @@ pub async fn telegram(
     State(state): State<AppState>,
     Json(payload): Json<Update>,
 ) -> impl IntoResponse {
-    let client = reqwest::Client::new();
-    let url = format!("https://api.telegram.org/bot{}/sendMessage", state.token);
     match payload.message {
         Some(msg) => {
-            let ans = tg::message_unwrap(msg);
-            let _ = client.post(url).json(&ans).send().await;
-            StatusCode::OK
+            let text = tg::message_unwrap(&msg);
+            match state.bot.send_message(msg.chat.id, text).await {
+                Ok(_) => StatusCode::OK,
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            }
         }
         None => StatusCode::OK,
     }
@@ -46,16 +51,8 @@ pub async fn create_product(
 ) -> impl IntoResponse {
     let collection = app_state.db.collection::<Product>(db::PRODUCT_COL);
     match collection.insert_one(payload, None).await {
-        Ok(result) => {
-            match collection
-                .find_one(doc! {"_id": result.inserted_id}, None)
-                .await
-            {
-                Ok(Some(product)) => Ok(Json(product)),
-                _ => Err(Json(json!({"status": "error"}))),
-            }
-        }
-        Err(_) => Err(Json(json!({"status": "error"}))),
+        Ok(result) => find_product_by_id(app_state, result.inserted_id).await,
+        Err(_) => Err(Json(json!({"status": "error creating product"}))),
     }
 }
 pub async fn get_products(State(app_state): State<AppState>) -> impl IntoResponse {
@@ -65,12 +62,22 @@ pub async fn get_products(State(app_state): State<AppState>) -> impl IntoRespons
         Err(_) => Json(result),
     }
 }
-pub async fn get_product_by_id() -> impl IntoResponse {
+pub async fn get_product_by_id(
+    State(app_state): State<AppState>,
+    Path(id): Path<Bson>,
+) -> impl IntoResponse {
+    find_product_by_id(app_state, id).await
+}
+
+pub async fn update_product(
+    State(_app_state): State<AppState>,
+    Path(_id): Path<Bson>,
+) -> impl IntoResponse {
     StatusCode::OK
 }
-pub async fn update_product() -> impl IntoResponse {
-    StatusCode::OK
-}
-pub async fn delete_product() -> impl IntoResponse {
+pub async fn delete_product(
+    State(_app_state): State<AppState>,
+    Path(_id): Path<Bson>,
+) -> impl IntoResponse {
     StatusCode::OK
 }
