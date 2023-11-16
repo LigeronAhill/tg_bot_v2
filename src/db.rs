@@ -48,12 +48,19 @@ impl Storage {
             .insert_one(product, None)
             .await
             .map_err(|_| MyError::DbError)?;
-        let result = self
+        match self
             .product
-            .find_product_by_id(inserted_product.inserted_id.to_string())
+            .find_one(doc! {"_id": inserted_product.inserted_id}, None)
             .await
-            .map_err(|_| MyError::DbError)?;
-        Ok(result)
+        {
+            Ok(Some(product)) => Ok(product),
+            _ => Err(MyError::DbError),
+        }
+        // let result = self
+        //     .find_product_by_id(inserted_product.inserted_id.to_string())
+        //     .await
+        //     .map_err(|_| MyError::DbError)?;
+        // Ok(result)
     }
     pub async fn find_all_products(&self) -> Result<Vec<Product>> {
         use futures::stream::TryStreamExt;
