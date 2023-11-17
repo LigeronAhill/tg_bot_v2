@@ -61,7 +61,18 @@ pub async fn mswebhook(
                                 .await
                                 .ok();
                         }
-                        Err(_) => continue,
+                        Err(e) => {
+                            let mut text = String::new();
+                            match e {
+                                crate::errors::MyError::Static(s) => text.push_str(&s),
+                                _ => text = String::from("oh my god"),
+                            }
+                            state
+                                .bot
+                                .send_message(state.tokens.my_tg_id, text)
+                                .await
+                                .ok();
+                        }
                     }
                 }
                 let text = format!("{:#?}", audit);

@@ -35,7 +35,7 @@ impl Event {
     pub async fn test_api(self, token: String) -> Result<serde_json::Value> {
         let client = reqwest::Client::new();
         let uri = self.meta.href;
-        let response = client
+        let response_body = client
             .get(uri)
             .bearer_auth(token)
             .send()
@@ -44,6 +44,6 @@ impl Event {
             .json::<serde_json::Value>()
             .await
             .map_err(|_| MyError::Static(String::from("json error")))?;
-        Ok(response)
+        Ok(response_body)
     }
 }
