@@ -1,5 +1,5 @@
+use crate::errors::{MyError, Result};
 use serde::{Deserialize, Serialize};
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Audit {
     #[serde(rename = "auditContext")]
@@ -31,4 +31,19 @@ pub enum Action {
     UPDATE,
     DELETE,
 }
-impl Event {}
+impl Event {
+    pub async fn test_api(self, token: String) -> Result<serde_json::Value> {
+        let client = reqwest::Client::new();
+        let uri = self.meta.href;
+        let response = client
+            .get(uri)
+            .bearer_auth(token)
+            .send()
+            .await
+            .map_err(|_| MyError::Static(String::from("request error")))?
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|_| MyError::Static(String::from("json error")))?;
+        Ok(response)
+    }
+}
