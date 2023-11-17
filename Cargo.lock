@@ -3168,6 +3168,7 @@ dependencies = [
  "bson",
  "chrono",
  "futures",
+ "log",
  "mongodb",
  "reqwest",
  "serde",
@@ -3178,6 +3179,7 @@ dependencies = [
  "shuttle-secrets",
  "shuttle-shared-db",
  "tokio",
+ "tracing",
  "uuid",
 ]
 

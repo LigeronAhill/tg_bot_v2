@@ -1,3 +1,4 @@
+use crate::models::{product::Product, tg::Update, AppState};
 use crate::{errors::Result, models::moy_sklad::Audit};
 use axum::{
     extract::{Path, State},
@@ -6,8 +7,7 @@ use axum::{
     Json,
 };
 use serde_json::Value;
-
-use crate::models::{product::Product, tg::Update, AppState};
+use tracing::info;
 
 pub async fn health() -> impl IntoResponse {
     StatusCode::OK
@@ -37,74 +37,29 @@ pub async fn telegram(
         None => StatusCode::OK,
     }
 }
-pub async fn mswebhook(
+pub async fn ms_webhook(
     State(state): State<AppState>,
     // Json(payload): Json<Option<serde_json::Value>>,
     Json(payload): Json<Audit>,
 ) -> impl IntoResponse {
-    let ms_token = state.tokens.ms_token.clone();
-    let tg = state.tokens.my_tg_id;
-    let bot = state.bot.clone();
-    state
-        .bot
-        .send_message(tg, "update...".to_string())
-        .await
-        .unwrap();
-    for event in payload.events {
-        bot.clone()
-            .send_message(tg, event.test_api(ms_token.to_owned()).await)
-            .await
-            .unwrap();
+    let products = payload
+        .take_product_from_moy_sklad(state.tokens.clone())
+        .await;
+    match products {
+        Ok(products) => {
+            for product in products {
+                let text = format!("{product:#?}");
+                state
+                    .bot
+                    .send_message(state.tokens.my_tg_id, text)
+                    .await
+                    .unwrap();
+            }
+        }
+        Err(_) => {
+            info!("Error getting products from MS");
+        }
     }
-    // if let Some(entity) = payload {
-    //     let msg = serde_json::from_value::<Audit>(entity.clone());
-    //     match msg {
-    //         Ok(audit) => {
-    //             state
-    //                 .bot
-    //                 .send_message(
-    //                     state.tokens.my_tg_id,
-    //                     String::from("Получила обновление..."),
-    //                 )
-    //                 .await
-    //                 .ok();
-    //             for event in audit.events.clone() {
-    //                 state
-    //                     .bot
-    //                     .send_message(
-    //                         state.tokens.my_tg_id,
-    //                         event.test_api(state.tokens.ms_token.to_owned()).await,
-    //                     )
-    //                     .await
-    //                     .unwrap();
-    //             }
-    // let text = format!("{:#?}", audit);
-    // state
-    //     .bot
-    //     .send_message(state.tokens.my_tg_id, text)
-    //     .await
-    //     .ok();
-    // }
-    // Err(_) => {
-    //     state
-    //         .bot
-    //         .send_message(
-    //             state.tokens.my_tg_id,
-    //             String::from("Странное обновление..."),
-    //         )
-    //         .await
-    //         .ok();
-    // state
-    //     .bot
-    //     .send_message(
-    //         state.tokens.my_tg_id,
-    //         serde_json::to_string_pretty(&entity).unwrap_or("i dont know".to_string()),
-    //     )
-    //     .await
-    //     .ok();
-    //         }
-    //     }
-    // };
     StatusCode::OK
 }
 pub async fn ymwebhook(

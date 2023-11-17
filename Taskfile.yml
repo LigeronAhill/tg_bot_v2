@@ -23,3 +23,7 @@ tasks:
   run:
     cmds:
       - cargo shuttle run
+
+  logs:
+    cmds:
+      - cargo shuttle logs

@@ -1,3 +1,4 @@
+use super::moy_sklad::ProductFromMoySklad;
 use crate::errors::{MyError, Result};
 use chrono::{DateTime, Local};
 use mongodb::bson::oid::ObjectId;
@@ -13,6 +14,24 @@ pub struct Product {
     pub ms_id: Uuid,
     pub created_at: DateTime<Local>,
     pub active: bool,
+}
+impl Product {
+    pub fn from_ms(product: ProductFromMoySklad) -> Result<Self> {
+        let mut base_price = 0;
+        // TODO: currencies!!!
+        // TODO: discount!!!
+        for price in product.sale_prices {
+            if price.price_type.name.as_str() == "Цена продажи" {
+                base_price = (price.value / 100.00) as i32;
+            }
+        }
+        let result = ProductBuilder::new()
+            .name(product.name)
+            .ms_id(product.id)
+            .price(base_price)
+            .build()?;
+        Ok(result)
+    }
 }
 #[derive(Debug, Default)]
 pub struct ProductBuilder {
