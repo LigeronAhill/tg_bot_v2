@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::models::{product::Product, tg::Update, AppState};
 
@@ -47,63 +47,32 @@ pub async fn mswebhook(
             Ok(audit) => {
                 state
                     .bot
-                    .send_message(state.tokens.my_tg_id, String::from("Получила обновление:"))
+                    .send_message(
+                        state.tokens.my_tg_id,
+                        String::from("Получила обновление..."),
+                    )
                     .await
                     .ok();
-                // for event in audit.events.clone() {
-                let client = reqwest::Client::builder().gzip(true).build().unwrap();
-                let uri = audit.events[0].clone().meta.href;
-                match client
-                    .get(uri)
-                    .bearer_auth(state.tokens.ms_token)
-                    .send()
-                    .await
-                {
-                    Ok(_) => {
-                        state
-                            .bot
-                            .send_message(state.tokens.my_tg_id, String::from("request succed"))
-                            .await
-                            .unwrap();
-                    }
-                    Err(_) => {
-                        state
-                            .bot
-                            .send_message(state.tokens.my_tg_id, String::from("request failed"))
-                            .await
-                            .unwrap();
-                    }
+                for event in audit.events.clone() {
+                    let resp = event
+                        .test_api(state.tokens.ms_token.to_owned())
+                        .await
+                        .unwrap_or_else(|e| json!({"error": e}));
+                    state
+                        .bot
+                        .send_message(
+                            state.tokens.my_tg_id,
+                            serde_json::to_string_pretty(&resp).unwrap(),
+                        )
+                        .await
+                        .ok();
                 }
-                //     match event.test_api(state.tokens.ms_token.clone()).await {
-                //         Ok(value) => {
-                //             let text = serde_json::to_string_pretty(&value)
-                //                 .unwrap_or("cant parse from ms".to_string());
-                //             state
-                //                 .bot
-                //                 .send_message(state.tokens.my_tg_id, text)
-                //                 .await
-                //                 .ok();
-                //         }
-                //         Err(e) => {
-                //             let mut text = String::new();
-                //             match e {
-                //                 crate::errors::MyError::Static(s) => text.push_str(&s),
-                //                 _ => text = String::from("oh my god"),
-                //             }
-                //             state
-                //                 .bot
-                //                 .send_message(state.tokens.my_tg_id, text)
-                //                 .await
-                //                 .ok();
-                //         }
-                //     }
-                // }
-                let text = format!("{:#?}", audit);
-                state
-                    .bot
-                    .send_message(state.tokens.my_tg_id, text)
-                    .await
-                    .ok();
+                // let text = format!("{:#?}", audit);
+                // state
+                //     .bot
+                //     .send_message(state.tokens.my_tg_id, text)
+                //     .await
+                //     .ok();
             }
             Err(_) => {
                 state
