@@ -44,6 +44,11 @@ pub async fn mswebhook(
 ) -> impl IntoResponse {
     let ms_token = state.tokens.ms_token.clone();
     let tg = state.tokens.my_tg_id;
+    state
+        .bot
+        .send_message(tg, "update...".to_string())
+        .await
+        .unwrap();
     for event in payload.events {
         state
             .bot
@@ -89,7 +94,6 @@ pub async fn mswebhook(
     //         )
     //         .await
     //         .ok();
-
     // state
     //     .bot
     //     .send_message(
