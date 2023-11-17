@@ -33,7 +33,7 @@ pub enum Action {
 }
 impl Event {
     pub async fn test_api(self, token: String) -> Result<serde_json::Value> {
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().gzip(true).build().unwrap();
         let uri = self.meta.href;
         let response_body = client
             .get(uri)
