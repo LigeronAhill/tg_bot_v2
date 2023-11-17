@@ -38,10 +38,11 @@ pub async fn telegram(
     }
 }
 pub async fn mswebhook(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> impl IntoResponse {
-    let _text: String = serde_json::from_value(payload).unwrap();
+    let text: String = serde_json::from_value(payload).unwrap();
+    let _ = state.bot.send_message(337581254, text).await.ok();
     StatusCode::OK
 }
 pub async fn ymwebhook(
