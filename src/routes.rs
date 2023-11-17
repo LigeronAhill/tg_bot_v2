@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::models::{product::Product, tg::Update, AppState};
 
@@ -39,62 +39,68 @@ pub async fn telegram(
 }
 pub async fn mswebhook(
     State(state): State<AppState>,
-    Json(payload): Json<Option<serde_json::Value>>,
+    // Json(payload): Json<Option<serde_json::Value>>,
+    Json(payload): Json<Audit>,
 ) -> impl IntoResponse {
-    if let Some(entity) = payload {
-        let msg = serde_json::from_value::<Audit>(entity.clone());
-        match msg {
-            Ok(audit) => {
-                state
-                    .bot
-                    .send_message(
-                        state.tokens.my_tg_id,
-                        String::from("Получила обновление..."),
-                    )
-                    .await
-                    .ok();
-                for event in audit.events.clone() {
-                    let resp = event
-                        .test_api(state.tokens.ms_token.to_owned())
-                        .await
-                        .unwrap_or_else(|e| json!({"error": e}));
-                    state
-                        .bot
-                        .send_message(
-                            state.tokens.my_tg_id,
-                            serde_json::to_string_pretty(&resp).unwrap(),
-                        )
-                        .await
-                        .ok();
-                }
-                // let text = format!("{:#?}", audit);
-                // state
-                //     .bot
-                //     .send_message(state.tokens.my_tg_id, text)
-                //     .await
-                //     .ok();
-            }
-            Err(_) => {
-                state
-                    .bot
-                    .send_message(
-                        state.tokens.my_tg_id,
-                        String::from("Странное обновление..."),
-                    )
-                    .await
-                    .ok();
+    let ms_token = state.tokens.ms_token.clone();
+    let tg = state.tokens.my_tg_id;
+    for event in payload.events {
+        state
+            .bot
+            .send_message(tg, event.test_api(ms_token.to_owned()).await)
+            .await
+            .unwrap();
+    }
+    // if let Some(entity) = payload {
+    //     let msg = serde_json::from_value::<Audit>(entity.clone());
+    //     match msg {
+    //         Ok(audit) => {
+    //             state
+    //                 .bot
+    //                 .send_message(
+    //                     state.tokens.my_tg_id,
+    //                     String::from("Получила обновление..."),
+    //                 )
+    //                 .await
+    //                 .ok();
+    //             for event in audit.events.clone() {
+    //                 state
+    //                     .bot
+    //                     .send_message(
+    //                         state.tokens.my_tg_id,
+    //                         event.test_api(state.tokens.ms_token.to_owned()).await,
+    //                     )
+    //                     .await
+    //                     .unwrap();
+    //             }
+    // let text = format!("{:#?}", audit);
+    // state
+    //     .bot
+    //     .send_message(state.tokens.my_tg_id, text)
+    //     .await
+    //     .ok();
+    // }
+    // Err(_) => {
+    //     state
+    //         .bot
+    //         .send_message(
+    //             state.tokens.my_tg_id,
+    //             String::from("Странное обновление..."),
+    //         )
+    //         .await
+    //         .ok();
 
-                // state
-                //     .bot
-                //     .send_message(
-                //         state.tokens.my_tg_id,
-                //         serde_json::to_string_pretty(&entity).unwrap_or("i dont know".to_string()),
-                //     )
-                //     .await
-                //     .ok();
-            }
-        }
-    };
+    // state
+    //     .bot
+    //     .send_message(
+    //         state.tokens.my_tg_id,
+    //         serde_json::to_string_pretty(&entity).unwrap_or("i dont know".to_string()),
+    //     )
+    //     .await
+    //     .ok();
+    //         }
+    //     }
+    // };
     StatusCode::OK
 }
 pub async fn ymwebhook(

@@ -1,4 +1,3 @@
-use crate::errors::{MyError, Result};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Audit {
@@ -32,18 +31,14 @@ pub enum Action {
     DELETE,
 }
 impl Event {
-    pub async fn test_api(self, token: String) -> Result<serde_json::Value> {
+    pub async fn test_api(self, token: String) -> String {
         let client = reqwest::Client::builder().gzip(true).build().unwrap();
         let uri = self.meta.href;
-        let response_body = client
-            .get(uri)
-            .bearer_auth(token)
-            .send()
+        let response_body = client.get(uri).bearer_auth(token).send().await.unwrap();
+        let result = response_body
+            .text()
             .await
-            .map_err(|_| MyError::Static(String::from("request error")))?
-            .json::<serde_json::Value>()
-            .await
-            .map_err(|_| MyError::Static(String::from("json error")))?;
-        Ok(response_body)
+            .unwrap_or("cant get text from response".to_string());
+        result
     }
 }
