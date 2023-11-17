@@ -53,14 +53,27 @@ pub async fn mswebhook(
                 // for event in audit.events.clone() {
                 let client = reqwest::Client::builder().gzip(true).build().unwrap();
                 let uri = audit.events[0].clone().meta.href;
-                let _ = client
+                match client
                     .get(uri)
                     .bearer_auth(state.tokens.ms_token)
                     .send()
                     .await
-                    .expect("request error")
-                    .json::<serde_json::Value>()
-                    .await;
+                {
+                    Ok(_) => {
+                        state
+                            .bot
+                            .send_message(state.tokens.my_tg_id, String::from("request succed"))
+                            .await
+                            .unwrap();
+                    }
+                    Err(_) => {
+                        state
+                            .bot
+                            .send_message(state.tokens.my_tg_id, String::from("request failed"))
+                            .await
+                            .unwrap();
+                    }
+                }
                 //     match event.test_api(state.tokens.ms_token.clone()).await {
                 //         Ok(value) => {
                 //             let text = serde_json::to_string_pretty(&value)
