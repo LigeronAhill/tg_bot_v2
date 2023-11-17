@@ -47,23 +47,29 @@ pub async fn mswebhook(
             Ok(audit) => {
                 state
                     .bot
-                    .send_message(337581254, String::from("Получила обновление:"))
+                    .send_message(state.tokens.my_tg_id, String::from("Получила обновление:"))
                     .await
                     .ok();
+                // for event in audit.events {
+                // }
                 let text = format!("{:#?}", audit);
-                state.bot.send_message(337581254, text).await.ok();
+                state
+                    .bot
+                    .send_message(state.tokens.my_tg_id, text)
+                    .await
+                    .ok();
             }
             Err(_) => {
                 state
                     .bot
-                    .send_message(337581254, String::from("Странное обновление:"))
+                    .send_message(state.tokens.my_tg_id, String::from("Странное обновление:"))
                     .await
                     .ok();
 
                 state
                     .bot
                     .send_message(
-                        337581254,
+                        state.tokens.my_tg_id,
                         serde_json::to_string_pretty(&entity).unwrap_or("i dont know".to_string()),
                     )
                     .await
