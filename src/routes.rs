@@ -1,4 +1,4 @@
-use crate::errors::Result;
+use crate::{errors::Result, models::moy_sklad::Audit};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -41,14 +41,36 @@ pub async fn mswebhook(
     State(state): State<AppState>,
     Json(payload): Json<Option<serde_json::Value>>,
 ) -> impl IntoResponse {
-    if let Some(text) = payload {
-        state
-            .bot
-            .send_message(337581254, text.to_string())
-            .await
-            .ok();
-    };
+    if let Some(entity) = payload {
+        let msg = serde_json::from_value::<Audit>(entity.clone());
+        match msg {
+            Ok(audit) => {
+                state
+                    .bot
+                    .send_message(337581254, String::from("Получила обновление:"))
+                    .await
+                    .ok();
+                let text = format!("{:#?}", audit);
+                state.bot.send_message(337581254, text).await.ok();
+            }
+            Err(_) => {
+                state
+                    .bot
+                    .send_message(337581254, String::from("Странное обновление:"))
+                    .await
+                    .ok();
 
+                state
+                    .bot
+                    .send_message(
+                        337581254,
+                        serde_json::to_string_pretty(&entity).unwrap_or("i dont know".to_string()),
+                    )
+                    .await
+                    .ok();
+            }
+        }
+    };
     StatusCode::OK
 }
 pub async fn ymwebhook(
