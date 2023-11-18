@@ -1,8 +1,5 @@
-use crate::models::{product::Product, tg::Update, AppState};
-//use crate::{errors::Result, models::moy_sklad::Audit};
 use crate::models::moy_sklad::Audit;
-use crate::models::woocommerce::WebhookOrder;
-// use axum::extract::rejection::JsonRejection;
+use crate::models::{product::Product, tg::Update, AppState};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -74,8 +71,7 @@ pub async fn ymwebhook(
 }
 pub async fn woo_webhook(
     State(state): State<AppState>,
-    //    payload: Result<Json<WebhookOrder>, JsonRejection>,
-    Json(payload): Json<WebhookOrder>,
+    Json(payload): Json<Value>,
 ) -> impl IntoResponse {
     //    match payload {
     //        Ok(payload) => {
