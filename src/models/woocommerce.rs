@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -105,8 +104,8 @@ pub struct WebhookOrder {
     pub currency: String,
     pub version: String,
     pub prices_include_tax: bool,
-    pub date_created: NaiveDateTime,
-    pub date_modified: NaiveDateTime,
+    pub date_created: String,
+    pub date_modified: String,
     pub discount_total: String,
     pub discount_tax: String,
     pub shipping_total: String,
@@ -125,8 +124,8 @@ pub struct WebhookOrder {
     pub customer_user_agent: String,
     pub created_via: String,
     pub customer_note: String,
-    pub date_completed: Option<NaiveDateTime>,
-    pub date_paid: Option<NaiveDateTime>,
+    pub date_completed: Option<String>,
+    pub date_paid: Option<String>,
     pub cart_hash: String,
     pub number: String,
     pub meta_data: Vec<OrderMetaData>,
@@ -140,10 +139,10 @@ pub struct WebhookOrder {
     pub is_editable: bool,
     pub needs_payment: bool,
     pub needs_processing: bool,
-    pub date_created_gmt: NaiveDateTime,
-    pub date_modified_gmt: NaiveDateTime,
-    pub date_completed_gmt: Option<NaiveDateTime>,
-    pub date_paid_gmt: Option<NaiveDateTime>,
+    pub date_created_gmt: String,
+    pub date_modified_gmt: String,
+    pub date_completed_gmt: Option<String>,
+    pub date_paid_gmt: Option<String>,
     pub currency_symbol: String,
     #[serde(rename = "_links")]
     pub links: Links,
