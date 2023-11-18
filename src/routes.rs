@@ -74,11 +74,10 @@ pub async fn woo_webhook(
     State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> impl IntoResponse {
-    let order = serde_json::from_value::<WebhookOrder>(payload.clone()).unwrap();
-    let text = format!(
-        "Order ID: {}\nTotal: {}\n{:#?}",
-        payload["id"], payload["total"], order
-    );
+    let text = match serde_json::from_value::<WebhookOrder>(payload.clone()) {
+        Ok(order) => format!("{order:#?}"),
+        Err(_) => format!("Order ID: {}\nTotal: {}\n", payload["id"], payload["total"]),
+    };
     state
         .bot
         .send_message(state.tokens.my_tg_id, text)
