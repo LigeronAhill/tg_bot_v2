@@ -1,5 +1,8 @@
 use crate::models::{product::Product, tg::Update, AppState};
-use crate::{errors::Result, models::moy_sklad::Audit};
+//use crate::{errors::Result, models::moy_sklad::Audit};
+use crate::models::moy_sklad::Audit;
+use crate::models::woocommerce::WebhookOrder;
+use axum::extract::rejection::JsonRejection;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -71,32 +74,40 @@ pub async fn ymwebhook(
 }
 pub async fn woo_webhook(
     State(state): State<AppState>,
-    Json(payload): Json<Value>,
+    payload: Result<Json<WebhookOrder>, JsonRejection>,
 ) -> impl IntoResponse {
-    let text: String = serde_json::from_value(payload).unwrap();
-    state
-        .bot
-        .send_message(state.tokens.my_tg_id, text)
-        .await
-        .unwrap();
-    StatusCode::OK
+    match payload {
+        Ok(payload) => {
+            let text = format!("{payload:#?}");
+            state
+                .bot
+                .send_message(state.tokens.my_tg_id, text)
+                .await
+                .unwrap();
+            StatusCode::OK
+        }
+        _ => StatusCode::OK,
+    }
+    // StatusCode::OK
 }
 pub async fn create_product(
     State(app_state): State<AppState>,
     Json(payload): Json<Product>,
-) -> Result<Json<Product>> {
+) -> crate::errors::Result<Json<Product>> {
     let result = app_state.storage.create_product(payload).await?;
     Ok(Json(result))
 }
 
-pub async fn get_products(State(app_state): State<AppState>) -> Result<Json<Vec<Product>>> {
+pub async fn get_products(
+    State(app_state): State<AppState>,
+) -> crate::errors::Result<Json<Vec<Product>>> {
     let result = app_state.storage.find_all_products().await?;
     Ok(Json(result))
 }
 pub async fn get_product_by_id(
     State(app_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<Product>> {
+) -> crate::errors::Result<Json<Product>> {
     let result = app_state.storage.find_product_by_id(id).await?;
     Ok(Json(result))
 }
@@ -105,21 +116,21 @@ pub async fn update_product(
     State(app_state): State<AppState>,
     Path(id): Path<String>,
     Json(upd_product): Json<Product>,
-) -> Result<()> {
+) -> crate::errors::Result<()> {
     app_state.storage.update_product(id, upd_product).await?;
     Ok(())
 }
 pub async fn delete_product(
     State(app_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<()> {
+) -> crate::errors::Result<()> {
     app_state.storage.delete_product(id).await?;
     Ok(())
 }
 pub async fn get_product_by_name(
     State(app_state): State<AppState>,
     Path(name): Path<String>,
-) -> Result<Json<Vec<Product>>> {
+) -> crate::errors::Result<Json<Vec<Product>>> {
     let result = app_state.storage.find_product_by_name(name).await?;
     Ok(Json(result))
 }
