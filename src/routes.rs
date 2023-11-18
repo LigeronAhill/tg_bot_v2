@@ -75,7 +75,7 @@ pub async fn woo_webhook(
 ) -> impl IntoResponse {
     //    match payload {
     //        Ok(payload) => {
-    let text = format!("{payload:#?}");
+    let text = format!("{}", payload["id"]);
     state
         .bot
         .send_message(state.tokens.my_tg_id, text)
