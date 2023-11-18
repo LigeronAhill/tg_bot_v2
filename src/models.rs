@@ -17,4 +17,6 @@ pub struct Tokens {
     pub my_tg_id: i64,
     pub safira_group_tg_id: i64,
     pub ms_token: String,
+    pub woo_token_1: String,
+    pub woo_token_2: String,
 }

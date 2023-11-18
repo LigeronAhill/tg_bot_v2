@@ -30,6 +30,12 @@ async fn axum(
         .expect("cant parse group id");
     let ms_token = secret_store.get("MS_TOKEN").expect("no ms token!");
     let storage = Storage::new(&db).await;
+    let woo_token_1 = secret_store
+        .get("WOO_TOKEN_1")
+        .expect("no woocommerce token!");
+    let woo_token_2 = secret_store
+        .get("WOO_TOKEN_2")
+        .expect("no woocommerce token!");
     storage
         .name_index_create()
         .await
@@ -42,6 +48,8 @@ async fn axum(
             my_tg_id,
             safira_group_tg_id,
             ms_token,
+            woo_token_1,
+            woo_token_2,
         },
     };
     let router = Router::new()

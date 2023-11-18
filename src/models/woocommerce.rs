@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Href {
@@ -21,8 +20,20 @@ pub struct OrderShippingLines {
     pub instance_id: String,
     pub total: String,
     pub total_tax: String,
-    pub taxes: Vec<Value>,
+    pub taxes: Vec<TaxesProperty>,
     pub meta_data: Vec<LineItemsMetaData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TaxesProperty {
+    pub id: i64,
+    pub rate_code: String,
+    pub rate_id: String,
+    pub label: String,
+    pub compound: bool,
+    pub tax_total: String,
+    pub shipping_tax_total: String,
+    pub meta_data: Vec<OrderMetaData>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -52,12 +63,12 @@ pub struct OrderLineItems {
     pub subtotal_tax: String,
     pub total: String,
     pub total_tax: String,
-    pub taxes: Vec<Value>,
+    pub taxes: Vec<TaxesProperty>,
     pub meta_data: Vec<LineItemsMetaData>,
     pub sku: String,
     pub price: i64,
     pub image: Image,
-    pub parent_name: Option<Value>,
+    pub parent_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -130,11 +141,11 @@ pub struct WebhookOrder {
     pub number: String,
     pub meta_data: Vec<OrderMetaData>,
     pub line_items: Vec<OrderLineItems>,
-    pub tax_lines: Vec<Value>,
+    pub tax_lines: Vec<TaxLines>,
     pub shipping_lines: Vec<OrderShippingLines>,
-    pub fee_lines: Vec<Value>,
-    pub coupon_lines: Vec<Value>,
-    pub refunds: Vec<Value>,
+    pub fee_lines: Vec<FeeLines>,
+    pub coupon_lines: Vec<CouponLines>,
+    pub refunds: Vec<Refund>,
     pub payment_url: String,
     pub is_editable: bool,
     pub needs_payment: bool,
@@ -146,4 +157,42 @@ pub struct WebhookOrder {
     pub currency_symbol: String,
     #[serde(rename = "_links")]
     pub links: Links,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TaxLines {
+    pub id: i64,
+    pub rate_code: Option<String>,
+    pub rate_id: Option<String>,
+    pub label: Option<String>,
+    pub compound: bool,
+    pub tax_total: String,
+    pub shipping_tax_total: Option<String>,
+    pub meta_data: Vec<OrderMetaData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FeeLines {
+    pub id: i64,
+    pub name: String,
+    pub tax_class: String,
+    pub tax_status: Option<String>,
+    pub total: String,
+    pub total_tax: String,
+    pub taxes: Vec<TaxesProperty>,
+    pub meta_data: Vec<OrderMetaData>,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CouponLines {
+    pub id: i64,
+    pub code: String,
+    pub discount: String,
+    pub discount_tax: String,
+    pub meta_data: Vec<OrderMetaData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Refund {
+    pub id: i64,
+    pub reason: String,
+    pub total: String,
 }
