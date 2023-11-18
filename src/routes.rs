@@ -70,21 +70,21 @@ pub async fn ymwebhook(
     StatusCode::OK
 }
 pub async fn woo_webhook(
-    State(state): State<AppState>,
-    Json(payload): Json<Option<Value>>,
+    State(_state): State<AppState>,
+    // Json(payload): Json<Option<Value>>,
 ) -> impl IntoResponse {
-    match payload {
-        Some(payload) => {
-            let text: String = serde_json::from_value(payload).unwrap();
-            state
-                .bot
-                .send_message(state.tokens.my_tg_id, text)
-                .await
-                .unwrap();
-            StatusCode::OK
-        }
-        None => StatusCode::OK,
-    }
+    // match payload {
+    //     Some(payload) => {
+    //         let text: String = serde_json::from_value(payload).unwrap();
+    //         state
+    //             .bot
+    //             .send_message(state.tokens.my_tg_id, text)
+    //             .await
+    //             .unwrap();
+    StatusCode::OK
+    //     }
+    //     None => StatusCode::OK,
+    // }
 }
 pub async fn create_product(
     State(app_state): State<AppState>,
