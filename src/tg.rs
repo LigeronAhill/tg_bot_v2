@@ -31,13 +31,13 @@ impl Bot {
 impl Update {
     pub fn parse_commands(&self) -> (bool, String) {
         if let Some(message) = self.message.to_owned() {
-           if let Some(entities) = message.entities {
-               for entity in entities {
-                   if entity.entity_type == "bot_command" {
-                       return (true, message.text);
-                   }
-               }
-           } 
+            if let Some(entities) = message.entities {
+                for entity in entities {
+                    if entity.entity_type == "bot_command" {
+                        return (true, message.text);
+                    }
+                }
+            }
         }
         (false, String::new())
     }
@@ -60,7 +60,9 @@ impl Update {
                 }
             }
             if words.len() > 1 || numbers.len() > 1 {
-                return Err(MyError::Static(String::from("Слишком много запросов... Введите коллекцию и цвет.")));
+                return Err(MyError::Static(String::from(
+                    "Слишком много запросов... Введите коллекцию и цвет.",
+                )));
             }
             Ok((words[0].to_string(), numbers[0]))
         } else {
