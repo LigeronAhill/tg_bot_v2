@@ -1,4 +1,5 @@
 use crate::models::moy_sklad::Audit;
+use crate::models::woocommerce::WebhookOrder;
 use crate::models::{product::Product, tg::Update, AppState};
 use axum::{
     extract::{Path, State},
@@ -73,19 +74,17 @@ pub async fn woo_webhook(
     State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> impl IntoResponse {
-    //    match payload {
-    //        Ok(payload) => {
-    let text = format!("{}", payload["id"]);
+    let order = serde_json::from_value::<WebhookOrder>(payload.clone()).unwrap();
+    let text = format!(
+        "Order ID: {}\nTotal: {}\n{:#?}",
+        payload["id"], payload["total"], order
+    );
     state
         .bot
         .send_message(state.tokens.my_tg_id, text)
         .await
         .unwrap();
     StatusCode::OK
-    //     }
-    //     _ => StatusCode::OK,
-    // }
-    // StatusCode::OK
 }
 pub async fn create_product(
     State(app_state): State<AppState>,
