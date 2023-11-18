@@ -20,6 +20,7 @@ impl Product {
         let mut base_price = 0;
         // TODO: currencies!!!
         // TODO: discount!!!
+        // TODO: archived!!!
         for price in product.sale_prices {
             if price.price_type.name.as_str() == "Цена продажи" {
                 base_price = (price.value / 100.00) as i32;

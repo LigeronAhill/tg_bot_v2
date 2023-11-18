@@ -69,6 +69,18 @@ pub async fn ymwebhook(
     let _text: String = serde_json::from_value(payload).unwrap();
     StatusCode::OK
 }
+pub async fn woo_webhook(
+    State(state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> impl IntoResponse {
+    let text: String = serde_json::from_value(payload).unwrap();
+    state
+        .bot
+        .send_message(state.tokens.my_tg_id, text)
+        .await
+        .unwrap();
+    StatusCode::OK
+}
 pub async fn create_product(
     State(app_state): State<AppState>,
     Json(payload): Json<Product>,
