@@ -180,7 +180,7 @@ pub struct ProductFromMoySklad {
     #[serde(rename = "productFolder")]
     pub product_folder: Data,
     #[serde(rename = "effectiveVat")]
-    pub effective_vat: i64,
+    pub effective_vat: Option<i64>,
     #[serde(rename = "effectiveVatEnabled")]
     pub effective_vat_enabled: bool,
     pub vat: Option<i64>,

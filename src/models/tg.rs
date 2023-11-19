@@ -42,7 +42,7 @@ pub struct Message {
     pub has_protected_content: Option<bool>,
     pub media_group_id: Option<String>,
     pub author_signature: Option<String>,
-    pub text: String,
+    pub text: Option<String>,
     pub entities: Option<Vec<MessageEntity>>,
     pub animation: Option<Animation>,
     pub audio: Option<Audio>,
