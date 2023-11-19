@@ -170,7 +170,7 @@ pub struct ProductFromMoySklad {
     pub group: Group,
     pub updated: String,
     pub name: String,
-    pub description: String,
+    pub description: Option<String>,
     pub code: String,
     #[serde(rename = "externalCode")]
     pub external_code: String,
@@ -188,20 +188,20 @@ pub struct ProductFromMoySklad {
     pub vat_enabled: bool,
     #[serde(rename = "useParentVat")]
     pub use_parent_vat: bool,
-    pub images: Attachments,
+    pub images: Option<Attachments>,
     #[serde(rename = "minPrice")]
-    pub min_price: Price,
+    pub min_price: Option<Price>,
     #[serde(rename = "salePrices")]
     pub sale_prices: Vec<SalePrice>,
     #[serde(rename = "buyPrice")]
-    pub buy_price: Price,
+    pub buy_price: Option<Price>,
     pub barcodes: Vec<BarCodes>,
-    pub supplier: Data,
+    pub supplier: Option<Data>,
     #[serde(rename = "paymentItemType")]
-    pub payment_item_type: String,
+    pub payment_item_type: Option<String>,
     #[serde(rename = "discountProhibited")]
     pub discount_prohibited: bool,
-    pub article: String,
+    pub article: Option<String>,
     pub weight: f64,
     pub volume: f64,
     #[serde(rename = "variantsCount")]
@@ -209,6 +209,6 @@ pub struct ProductFromMoySklad {
     #[serde(rename = "isSerialTrackable")]
     pub is_serial_trackable: bool,
     #[serde(rename = "trackingType")]
-    pub tracking_type: String,
-    pub files: Attachments,
+    pub tracking_type: Option<String>,
+    pub files: Option<Attachments>,
 }
