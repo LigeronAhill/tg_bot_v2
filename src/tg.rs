@@ -71,4 +71,12 @@ impl Update {
             )))
         }
     }
+    pub fn parse_file(&self) -> Result<String> {
+        if let Some(msg) = self.message.clone() {
+            if let Some(doc) = msg.document {
+                return Ok(doc.file_id);
+            }
+        }
+        Err(MyError::Static(String::from("no file")))
+    }
 }

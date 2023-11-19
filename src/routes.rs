@@ -19,18 +19,22 @@ pub async fn telegram(
     State(state): State<AppState>,
     Json(payload): Json<Update>,
 ) -> impl IntoResponse {
-    let text = if payload.parse_commands().0 {
-        format!("Вы ввели команду: {}", payload.parse_commands().1)
-    } else {
-        match payload.parse_text() {
-            Ok((text, color)) => {
-                format!("Вы искали коллекцию по запросу: {text} и цвет: {color}")
+    let text = if payload.parse_file().is_err() {
+        if payload.parse_commands().0 {
+            format!("Вы ввели команду: {}", payload.parse_commands().1)
+        } else {
+            match payload.parse_text() {
+                Ok((text, color)) => {
+                    format!("Вы искали коллекцию по запросу: {text} и цвет: {color}")
+                }
+                Err(err) => match err {
+                    MyError::Static(text) => text,
+                    _ => "Что-то пошло не так".to_string(),
+                },
             }
-            Err(err) => match err {
-                MyError::Static(text) => text,
-                _ => "Что-то пошло не так".to_string(),
-            },
         }
+    } else {
+        payload.parse_file().unwrap()
     };
     state
         .bot
@@ -39,25 +43,6 @@ pub async fn telegram(
         .unwrap();
 
     StatusCode::OK
-    // match payload.message {
-    //     Some(msg) => {
-    //         let words = msg.text.split_whitespace();
-    //         let mut color: i32 = 0;
-    //         let mut col = String::new();
-    //         for word in words {
-    //             match word.parse::<i32>() {
-    //                 Ok(number) => color = number,
-    //                 Err(_) => col = word.to_string(),
-    //             }
-    //         }
-    //         let text = format!("Вы искали коллекцию {col} в цвете {color}?");
-    //         match state.bot.send_message(msg.chat.id, text).await {
-    //             Ok(_) => StatusCode::OK,
-    //             Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-    //         }
-    //     }
-    //     None => StatusCode::OK,
-    // }
 }
 pub async fn ms_webhook(
     State(state): State<AppState>,
