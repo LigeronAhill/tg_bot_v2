@@ -56,12 +56,13 @@ impl Update {
                 if part.parse::<i32>().is_ok() {
                     numbers.push(part.parse::<i32>().unwrap());
                 } else {
-                    if part.len() < 4 {
-                        return Err(MyError::Static(String::from(
-                            "Слишком мало букв для поиска",
-                        )));
-                    } else {
-                        words.push(part.to_string());
+                    match part.len() < 4 {
+                        true => {
+                            return Err(MyError::Static(String::from(
+                                "Слишком мало букв для поиска",
+                            )));
+                        }
+                        false => words.push(part.to_string()),
                     }
                 }
             }
