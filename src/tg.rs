@@ -56,9 +56,16 @@ impl Update {
                 if part.parse::<i32>().is_ok() {
                     numbers.push(part.parse::<i32>().unwrap());
                 } else {
-                    words.push(part.to_string());
+                    if part.len() < 4 {
+                        return Err(MyError::Static(String::from(
+                            "Слишком мало букв для поиска",
+                        )));
+                    } else {
+                        words.push(part.to_string());
+                    }
                 }
             }
+
             if words.len() > 1 || numbers.len() > 1 {
                 return Err(MyError::Static(String::from(
                     "Слишком много запросов... Введите коллекцию и цвет.",
