@@ -6,6 +6,7 @@ pub enum MyError {
     ProductBuildError,
     DbError,
     ReqwestError,
+    MsgParseError,
 }
 pub type Result<T> = core::result::Result<T, MyError>;
 
@@ -16,6 +17,7 @@ impl IntoResponse for MyError {
             MyError::ReqwestError => "something went wrong in Reqwest".to_string(),
             MyError::Static(s) => s,
             MyError::ProductBuildError => "failed product build".to_string(),
+            MyError::MsgParseError => "failed to parse message".to_string(),
         };
 
         // its often easiest to implement `IntoResponse` by calling other implementations

@@ -1,7 +1,6 @@
-use crate::errors::MyError;
 use crate::models::moy_sklad::Audit;
 use crate::models::woocommerce::WebhookOrder;
-use crate::models::{product::Product, tg::Update, AppState};
+use crate::models::{product::Product, tgapi::Update, AppState};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -19,37 +18,13 @@ pub async fn telegram(
     State(state): State<AppState>,
     Json(payload): Json<Update>,
 ) -> impl IntoResponse {
-    if payload
-        .message
-        .as_ref()
-        .is_some_and(|msg| msg.text.is_empty())
-    {
-        StatusCode::OK
-    } else {
-        let text = if payload.parse_file().is_err() {
-            if payload.parse_commands().0 {
-                format!("Вы ввели команду: {}", payload.parse_commands().1)
-            } else {
-                match payload.parse_text() {
-                    Ok((text, color)) => {
-                        format!("Вы искали коллекцию по запросу: {text} и цвет: {color}")
-                    }
-                    Err(err) => match err {
-                        MyError::Static(text) => text,
-                        _ => "Что-то пошло не так".to_string(),
-                    },
-                }
-            }
-        } else {
-            payload.parse_file().unwrap()
-        };
-        state
-            .bot
-            .send_message(state.tokens.my_tg_id, text)
-            .await
-            .unwrap();
-        StatusCode::OK
-    }
+    let text = payload.filter_msg().await;
+    state
+        .bot
+        .send_message(state.tokens.my_tg_id, text)
+        .await
+        .unwrap();
+    StatusCode::OK
 }
 pub async fn ms_webhook(
     State(state): State<AppState>,

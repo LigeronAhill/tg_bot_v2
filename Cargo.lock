@@ -3165,10 +3165,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "bitflags 2.4.1",
  "bson",
+ "bytes",
  "chrono",
  "futures",
  "log",
+ "mime",
  "mongodb",
  "reqwest",
  "serde",
@@ -3180,6 +3183,7 @@ dependencies = [
  "shuttle-shared-db",
  "tokio",
  "tracing",
+ "url",
  "uuid",
 ]
 
