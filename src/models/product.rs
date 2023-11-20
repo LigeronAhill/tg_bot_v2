@@ -38,7 +38,11 @@ impl Product {
         if let Some(attributes) = product.attributes {
             for attribute in attributes {
                 if attribute.name.as_str() == "Ширина рулона, м" {
-                    width = attribute.value.to_string()
+                    width = attribute
+                        .value
+                        .to_string()
+                        .replace("\"", "")
+                        .replace("\\", "")
                 }
             }
         }
