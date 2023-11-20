@@ -1,16 +1,9 @@
-#[allow(unused_imports)]
 use axum::routing::{delete, get, post, put};
-#[allow(unused_imports)]
 use axum::Router;
-#[allow(unused_imports)]
 use db::Storage;
-#[allow(unused_imports)]
 use models::Tokens;
-#[allow(unused_imports)]
 use mongodb::Database;
-#[allow(unused_imports)]
 use shuttle_secrets::SecretStore;
-#[allow(unused_imports)]
 use tg::Bot;
 
 pub mod db;

@@ -11,6 +11,8 @@ pub struct Product {
     pub name: String,
     pub price: i32,
     pub stock: Vec<f64>,
+    pub category: String,
+    // pub variants: Vec,
     pub ms_id: Uuid,
     pub created_at: DateTime<Local>,
     pub active: bool,
@@ -30,6 +32,7 @@ impl Product {
             .name(product.name)
             .ms_id(product.id)
             .price(base_price)
+            .category(product.path_name)
             .build()?;
         Ok(result)
     }
@@ -40,6 +43,7 @@ pub struct ProductBuilder {
     pub name: Option<String>,
     pub price: Option<i32>,
     pub stock: Vec<f64>,
+    pub category: Option<String>,
     pub ms_id: Option<Uuid>,
     pub created_at: Option<DateTime<Local>>,
     pub active: bool,
@@ -61,6 +65,10 @@ impl ProductBuilder {
         self.stock.push(stock.into());
         self
     }
+    pub fn category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+        self
+    }
     pub fn ms_id(mut self, ms_id: impl Into<String>) -> Self {
         self.ms_id = Uuid::parse_str(&ms_id.into()).ok();
         self
@@ -68,6 +76,9 @@ impl ProductBuilder {
     pub fn build(self) -> Result<Product> {
         let Some(name) = self.name.clone() else {
             return Err(MyError::Static(String::from("No name!")));
+        };
+        let Some(category) = self.category.clone() else {
+            return Err(MyError::Static(String::from("No category!")));
         };
         let price = self.price.unwrap_or(0);
         let stock = self.stock.clone();
@@ -79,6 +90,7 @@ impl ProductBuilder {
             name,
             price,
             stock,
+            category,
             ms_id,
             created_at: Local::now(),
             active: true,
