@@ -1,4 +1,4 @@
-use super::moy_sklad::ProductFromMoySklad;
+use super::moy_sklad::product::ProductFromMoySklad;
 use crate::errors::{MyError, Result};
 use chrono::{DateTime, Local};
 use mongodb::bson::oid::ObjectId;
@@ -10,8 +10,8 @@ pub struct Product {
     pub id: Option<ObjectId>,
     pub name: String,
     pub price: i32,
-    pub article: Option<String>,
-    pub width: Option<f64>,
+    pub article: String,
+    pub width: Vec<String>,
     pub stock: Vec<f64>,
     pub category: String,
     pub ms_id: Uuid,
@@ -30,10 +30,14 @@ impl Product {
                 base_price = (price.value / 100.00) as i32;
             }
         }
+        let article = match product.article {
+            Some(art) => art,
+            None => String::new(),
+        };
         let result = ProductBuilder::new()
             .name(product.name)
             .price(base_price)
-            .article(product.article)
+            .article(article)
             .ms_id(product.id)
             .category(product.path_name)
             .variants(product.variants_count)
@@ -46,7 +50,7 @@ pub struct ProductBuilder {
     pub name: Option<String>,
     pub price: Option<i32>,
     pub article: Option<String>,
-    pub width: Option<f64>,
+    pub width: Vec<String>,
     pub stock: Vec<f64>,
     pub category: Option<String>,
     pub ms_id: Option<Uuid>,
@@ -67,12 +71,12 @@ impl ProductBuilder {
         self.price = Some(price.into());
         self
     }
-    pub fn article(mut self, article: Option<String>) -> Self {
-        self.article = article;
+    pub fn article(mut self, article: impl Into<String>) -> Self {
+        self.article = Some(article.into());
         self
     }
-    pub fn width(mut self, width: impl Into<f64>) -> Self {
-        self.width = Some(width.into());
+    pub fn width(mut self, width: impl Into<String>) -> Self {
+        self.width.push(width.into());
         self
     }
     pub fn stock(mut self, stock: impl Into<f64>) -> Self {
@@ -95,7 +99,9 @@ impl ProductBuilder {
         let Some(name) = self.name.clone() else {
             return Err(MyError::Static(String::from("No name!")));
         };
-        let article = self.article.clone();
+        let Some(article) = self.article.clone() else {
+            return Err(MyError::ProductBuildError);
+        };
         let Some(category) = self.category.clone() else {
             return Err(MyError::Static(String::from("No category!")));
         };

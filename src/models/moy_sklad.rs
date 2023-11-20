@@ -2,7 +2,8 @@ use crate::errors::{MyError, Result};
 use crate::models::product::Product;
 use crate::models::Tokens;
 use serde::{Deserialize, Serialize};
-
+pub mod product;
+use product::*;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Audit {
     #[serde(rename = "auditContext")]
@@ -32,6 +33,30 @@ impl Audit {
                 .json::<ProductFromMoySklad>()
                 .await
                 .map_err(|_| MyError::ReqwestError)?;
+            if result.variants_count != 0 {
+                let url = "https://api.moysklad.ru/api/remap/1.2/entity/variant";
+                let p_id = result.id.clone();
+                let filter = format!("productid={p_id}");
+                let params = [("filter", filter.as_str())];
+                let res: Variants = client
+                    .get(url)
+                    .form(&params)
+                    .bearer_auth(tokens.ms_token.clone())
+                    .send()
+                    .await
+                    .map_err(|_| MyError::ReqwestError)?
+                    .json()
+                    .await
+                    .map_err(|_| MyError::ReqwestError)?;
+                for var in res.rows {
+                    for ch in var.characteristics {
+                        let width = ch.value;
+                        let mut product = Product::from_ms(result.clone())?;
+                        product.width.push(width);
+                        result_slice.push(product)
+                    }
+                }
+            }
             let product = Product::from_ms(result)?;
             result_slice.push(product);
         }
@@ -71,144 +96,143 @@ pub enum Action {
     DELETE,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct BarCodes {
-    pub ean13: String,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct BarCodes {
+//     pub ean13: String,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct PriceTypeMeta {
-    pub href: String,
-    #[serde(rename = "type")]
-    pub price_type: String,
-    #[serde(rename = "mediaType")]
-    pub media_type: String,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct PriceTypeMeta {
+//     pub href: String,
+//     #[serde(rename = "type")]
+//     pub price_type: String,
+//     #[serde(rename = "mediaType")]
+//     pub media_type: String,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct PriceType {
-    pub meta: PriceTypeMeta,
-    pub id: String,
-    pub name: String,
-    #[serde(rename = "externalCode")]
-    pub external_code: String,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct PriceType {
+//     pub meta: PriceTypeMeta,
+//     pub id: String,
+//     pub name: String,
+//     #[serde(rename = "externalCode")]
+//     pub external_code: String,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct SalePrice {
-    pub value: f64,
-    pub currency: Data,
-    #[serde(rename = "priceType")]
-    pub price_type: PriceType,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct SalePrice {
+//     pub value: f64,
+//     pub currency: Data,
+//     #[serde(rename = "priceType")]
+//     pub price_type: PriceType,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct Price {
-    pub value: f64,
-    pub currency: Data,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct Price {
+//     pub value: f64,
+//     pub currency: Data,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct AttachmentsMeta {
-    pub href: String,
-    #[serde(rename = "type")]
-    pub r#type: String,
-    #[serde(rename = "mediaType")]
-    pub media_type: String,
-    pub size: i64,
-    pub limit: i64,
-    pub offset: i64,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct AttachmentsMeta {
+//     pub href: String,
+//     #[serde(rename = "type")]
+//     pub r#type: String,
+//     #[serde(rename = "mediaType")]
+//     pub media_type: String,
+//     pub size: i64,
+//     pub limit: i64,
+//     pub offset: i64,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct Attachments {
-    pub meta: AttachmentsMeta,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct Attachments {
+//     pub meta: AttachmentsMeta,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct GroupMeta {
-    pub href: String,
-    #[serde(rename = "metadataHref")]
-    pub metadata_href: String,
-    #[serde(rename = "type")]
-    pub r#type: String,
-    #[serde(rename = "mediaType")]
-    pub media_type: String,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct GroupMeta {
+//     pub href: String,
+//     #[serde(rename = "metadataHref")]
+//     pub metadata_href: String,
+//     #[serde(rename = "type")]
+//     pub r#type: String,
+//     #[serde(rename = "mediaType")]
+//     pub media_type: String,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct Group {
-    pub meta: GroupMeta,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct Group {
+//     pub meta: GroupMeta,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct Data {
-    pub meta: ProductFromMoySkladMeta,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct Data {
+//     pub meta: ProductFromMoySkladMeta,
+// }
 
-#[derive(Serialize, Deserialize)]
-pub struct ProductFromMoySkladMeta {
-    pub href: String,
-    #[serde(rename = "metadataHref")]
-    pub metadata_href: String,
-    #[serde(rename = "type")]
-    pub r#type: String,
-    #[serde(rename = "mediaType")]
-    pub media_type: String,
-    #[serde(rename = "uuidHref")]
-    pub uuid_href: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ProductFromMoySklad {
-    pub meta: ProductFromMoySkladMeta,
-    pub id: String,
-    #[serde(rename = "accountId")]
-    pub account_id: String,
-    pub owner: Data,
-    pub shared: bool,
-    pub group: Group,
-    pub updated: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub code: String,
-    #[serde(rename = "externalCode")]
-    pub external_code: String,
-    pub archived: bool,
-    #[serde(rename = "pathName")]
-    pub path_name: String,
-    #[serde(rename = "productFolder")]
-    pub product_folder: Data,
-    #[serde(rename = "effectiveVat")]
-    pub effective_vat: Option<i64>,
-    #[serde(rename = "effectiveVatEnabled")]
-    pub effective_vat_enabled: Option<bool>,
-    pub vat: Option<i64>,
-    #[serde(rename = "vatEnabled")]
-    pub vat_enabled: Option<bool>,
-    #[serde(rename = "useParentVat")]
-    pub use_parent_vat: Option<bool>,
-    pub images: Option<Attachments>,
-    #[serde(rename = "minPrice")]
-    pub min_price: Option<Price>,
-    #[serde(rename = "salePrices")]
-    pub sale_prices: Vec<SalePrice>,
-    #[serde(rename = "buyPrice")]
-    pub buy_price: Option<Price>,
-    pub barcodes: Vec<BarCodes>,
-    pub supplier: Option<Data>,
-    #[serde(rename = "paymentItemType")]
-    pub payment_item_type: Option<String>,
-    #[serde(rename = "discountProhibited")]
-    pub discount_prohibited: bool,
-    pub article: Option<String>,
-    pub weight: f64,
-    pub volume: f64,
-    #[serde(rename = "variantsCount")]
-    pub variants_count: i64,
-    #[serde(rename = "isSerialTrackable")]
-    pub is_serial_trackable: bool,
-    #[serde(rename = "trackingType")]
-    pub tracking_type: Option<String>,
-    pub files: Option<Attachments>,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct ProductFromMoySkladMeta {
+//     pub href: String,
+//     #[serde(rename = "metadataHref")]
+//     pub metadata_href: String,
+//     #[serde(rename = "type")]
+//     pub r#type: String,
+//     #[serde(rename = "mediaType")]
+//     pub media_type: String,
+//     #[serde(rename = "uuidHref")]
+//     pub uuid_href: String,
+// }
+// #[derive(Serialize, Deserialize)]
+// pub struct ProductFromMoySklad {
+//     pub meta: ProductFromMoySkladMeta,
+//     pub id: String,
+//     #[serde(rename = "accountId")]
+//     pub account_id: String,
+//     pub owner: Data,
+//     pub shared: bool,
+//     pub group: Group,
+//     pub updated: String,
+//     pub name: String,
+//     pub description: Option<String>,
+//     pub code: String,
+//     #[serde(rename = "externalCode")]
+//     pub external_code: String,
+//     pub archived: bool,
+//     #[serde(rename = "pathName")]
+//     pub path_name: String,
+//     #[serde(rename = "productFolder")]
+//     pub product_folder: Data,
+//     #[serde(rename = "effectiveVat")]
+//     pub effective_vat: Option<i64>,
+//     #[serde(rename = "effectiveVatEnabled")]
+//     pub effective_vat_enabled: Option<bool>,
+//     pub vat: Option<i64>,
+//     #[serde(rename = "vatEnabled")]
+//     pub vat_enabled: Option<bool>,
+//     #[serde(rename = "useParentVat")]
+//     pub use_parent_vat: Option<bool>,
+//     pub images: Option<Attachments>,
+//     #[serde(rename = "minPrice")]
+//     pub min_price: Option<Price>,
+//     #[serde(rename = "salePrices")]
+//     pub sale_prices: Vec<SalePrice>,
+//     #[serde(rename = "buyPrice")]
+//     pub buy_price: Option<Price>,
+//     pub barcodes: Vec<BarCodes>,
+//     pub supplier: Option<Data>,
+//     #[serde(rename = "paymentItemType")]
+//     pub payment_item_type: Option<String>,
+//     #[serde(rename = "discountProhibited")]
+//     pub discount_prohibited: bool,
+//     pub article: Option<String>,
+//     pub weight: f64,
+//     pub volume: f64,
+//     #[serde(rename = "variantsCount")]
+//     pub variants_count: i64,
+//     #[serde(rename = "isSerialTrackable")]
+//     pub is_serial_trackable: bool,
+//     #[serde(rename = "trackingType")]
+//     pub tracking_type: Option<String>,
+//     pub files: Option<Attachments>,
+// }
