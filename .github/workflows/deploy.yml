@@ -1,0 +1,24 @@
+name: Shuttle Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shuttle-hq/deploy-action@main
+        with:
+          deploy-key: ${{ secrets.SHUTTLE_API_KEY }}
+          secrets: |
+            TG_TOKEN = '${{ secrets.TG_TOKEN }}'
+            GROUP_TG_ID = '${{ secrets.GROUP_TG_ID }}'
+            MS_TOKEN = '${{ secrets.MS_TOKEN }}'
+            MY_TG_ID = '${{ secrets.MY_TG_ID }}'
+            WOO_TOKEN_1 = '${{ secrets.WOO_TOKEN_1 }}'
+            WOO_TOKEN_2 = '${{ secrets.WOO_TOKEN_2 }}'
+            VK_TOKEN = '${{ secrets.VK_TOKEN }}'
+            VK_OWNER_ID = '${{ secrets.WOO_VK_OWNER_ID }}'

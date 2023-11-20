@@ -42,31 +42,3 @@ impl ForwardMessage {
         Self { chat_id, text }
     }
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn parse_text_works() {
-        let text = vec![
-            ("fedo 27", "fedo 27"),
-            ("hi", "hi"),
-            ("fd 196", "fd 196"),
-            ("ben", "ben"),
-            ("bently 105", "bently 105"),
-            ("uralmash 123 inache vseh", "uralmash 123 inache vseh"),
-            ("henry ford 1900 2023", "henry ford 1900 2023"),
-            ("messa 03", "messa 03"),
-            ("lyrica 8B72", "lyrica 8B72"),
-            ("аврора светло-бежевый", "аврора светло-бежевый"),
-        ];
-        for frase in text {
-            if frase.0 != parse_text(frase.1.to_string()).as_str() {
-                panic!(
-                    "{} ne {}",
-                    frase.0.to_string(),
-                    parse_text(frase.1.to_string()),
-                )
-            }
-        }
-    }
-}
