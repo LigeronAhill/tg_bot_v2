@@ -1,9 +1,16 @@
+#[allow(unused_imports)]
 use axum::routing::{delete, get, post, put};
+#[allow(unused_imports)]
 use axum::Router;
+#[allow(unused_imports)]
 use db::Storage;
+#[allow(unused_imports)]
 use models::Tokens;
+#[allow(unused_imports)]
 use mongodb::Database;
+#[allow(unused_imports)]
 use shuttle_secrets::SecretStore;
+#[allow(unused_imports)]
 use tg::Bot;
 
 pub mod db;
@@ -54,7 +61,6 @@ async fn axum(
     };
     let router = Router::new()
         .route("/health", get(routes::health))
-        .route("/api/v1/telegram", post(routes::telegram))
         .route("/api/v1/mswebhook", post(routes::ms_webhook))
         .route("/api/v1/woowebhook", post(routes::woo_webhook))
         .route("/api/v1/ymwebhook", post(routes::ymwebhook))

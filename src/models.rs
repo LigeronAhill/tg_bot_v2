@@ -4,7 +4,6 @@ pub mod market;
 pub mod moy_sklad;
 pub mod product;
 // pub mod tg;
-pub mod tgapi;
 pub mod woocommerce;
 #[derive(Clone)]
 pub struct AppState {

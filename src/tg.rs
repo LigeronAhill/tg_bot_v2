@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{MyError, Result};
-use crate::models::tgapi::message_kinds::media_kinds::{MediaKind, MediaText};
-use crate::models::tgapi::message_kinds::{MessageCommon, MessageKind};
-use crate::models::tgapi::{ChatId, Message, Update};
 pub fn parse_text(text: String) -> String {
     text.to_string()
 }
@@ -32,32 +29,6 @@ impl Bot {
             .await
             .map_err(|_| MyError::ReqwestError)?;
         Ok(())
-    }
-}
-impl Update {
-    pub async fn filter_msg(&self) -> String {
-        match self.kind.clone() {
-            crate::models::tgapi::UpdateKind::Message(msg) => match msg.text() {
-                Some(text) => text.to_string(),
-                None => "kawabangaa".to_string(),
-            },
-            _ => "the winter is close".to_string(),
-        }
-    }
-}
-
-impl Message {
-    pub fn chat_id(&self) -> ChatId {
-        self.chat.id.clone()
-    }
-    pub fn text(&self) -> Option<&str> {
-        match &self.kind {
-            MessageKind::Common(MessageCommon {
-                media_kind: MediaKind::Text(MediaText { text, .. }),
-                ..
-            }) => Some(text),
-            _ => None,
-        }
     }
 }
 

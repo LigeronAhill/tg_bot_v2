@@ -1,6 +1,6 @@
 use crate::models::moy_sklad::Audit;
 use crate::models::woocommerce::WebhookOrder;
-use crate::models::{product::Product, tgapi::Update, AppState};
+use crate::models::{product::Product, AppState};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -14,18 +14,6 @@ pub async fn health() -> impl IntoResponse {
     StatusCode::OK
 }
 
-pub async fn telegram(
-    State(state): State<AppState>,
-    Json(payload): Json<Update>,
-) -> impl IntoResponse {
-    let text = payload.filter_msg().await;
-    state
-        .bot
-        .send_message(state.tokens.my_tg_id, text)
-        .await
-        .unwrap();
-    StatusCode::OK
-}
 pub async fn ms_webhook(
     State(state): State<AppState>,
     // Json(payload): Json<Option<serde_json::Value>>,

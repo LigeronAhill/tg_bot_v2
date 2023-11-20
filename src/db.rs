@@ -10,26 +10,15 @@ use mongodb::{
 // use serde::{Deserialize, Serialize};
 
 pub const PRODUCT_COL: &str = "product";
-// pub const DIALIOG_COL: &str = "dialog";
-
-// #[derive(Serialize, Deserialize, Clone, Debug)]
-// pub struct Dialog {
-//     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
-//     pub id: Option<ObjectId>,
-//     pub chat_id: i64,
-//     pub chat_date_time: chrono::NaiveDateTime,
-// }
 
 #[derive(Clone, Debug)]
 pub struct Storage {
     product: Collection<Product>,
-    // dialog: Collection<Dialog>,
 }
 impl Storage {
     pub async fn new(db: &Database) -> Self {
         Self {
             product: db.collection::<Product>(PRODUCT_COL),
-            // dialog: db.collection::<Dialog>(DIALIOG_COL),
         }
     }
     pub async fn name_index_create(&self) -> Result<()> {
@@ -58,11 +47,6 @@ impl Storage {
             Ok(Some(product)) => Ok(product),
             _ => Err(MyError::DbError),
         }
-        // let result = self
-        //     .find_product_by_id(inserted_product.inserted_id.to_string())
-        //     .await
-        //     .map_err(|_| MyError::DbError)?;
-        // Ok(result)
     }
     pub async fn find_all_products(&self) -> Result<Vec<Product>> {
         let mut cursor = self
