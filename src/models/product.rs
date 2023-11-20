@@ -10,10 +10,12 @@ pub struct Product {
     pub id: Option<ObjectId>,
     pub name: String,
     pub price: i32,
+    pub article: Option<String>,
+    pub width: Option<f64>,
     pub stock: Vec<f64>,
     pub category: String,
-    // pub variants: Vec,
     pub ms_id: Uuid,
+    pub variants: i64,
     pub created_at: DateTime<Local>,
     pub active: bool,
 }
@@ -30,21 +32,25 @@ impl Product {
         }
         let result = ProductBuilder::new()
             .name(product.name)
-            .ms_id(product.id)
             .price(base_price)
+            .article(product.article)
+            .ms_id(product.id)
             .category(product.path_name)
+            .variants(product.variants_count)
             .build()?;
         Ok(result)
     }
 }
 #[derive(Debug, Default)]
 pub struct ProductBuilder {
-    pub id: Option<ObjectId>,
     pub name: Option<String>,
     pub price: Option<i32>,
+    pub article: Option<String>,
+    pub width: Option<f64>,
     pub stock: Vec<f64>,
     pub category: Option<String>,
     pub ms_id: Option<Uuid>,
+    pub variants: Option<i64>,
     pub created_at: Option<DateTime<Local>>,
     pub active: bool,
 }
@@ -61,6 +67,14 @@ impl ProductBuilder {
         self.price = Some(price.into());
         self
     }
+    pub fn article(mut self, article: Option<String>) -> Self {
+        self.article = article;
+        self
+    }
+    pub fn width(mut self, width: impl Into<f64>) -> Self {
+        self.width = Some(width.into());
+        self
+    }
     pub fn stock(mut self, stock: impl Into<f64>) -> Self {
         self.stock.push(stock.into());
         self
@@ -73,25 +87,37 @@ impl ProductBuilder {
         self.ms_id = Uuid::parse_str(&ms_id.into()).ok();
         self
     }
+    pub fn variants(mut self, variants: i64) -> Self {
+        self.variants = Some(variants);
+        self
+    }
     pub fn build(self) -> Result<Product> {
         let Some(name) = self.name.clone() else {
             return Err(MyError::Static(String::from("No name!")));
         };
+        let article = self.article.clone();
         let Some(category) = self.category.clone() else {
             return Err(MyError::Static(String::from("No category!")));
         };
         let price = self.price.unwrap_or(0);
         let stock = self.stock.clone();
+        let width = self.width;
         let Some(ms_id) = self.ms_id else {
             return Err(MyError::Static(String::from("No ms_id!")));
         };
+        let Some(variants) = self.variants else {
+            return Err(MyError::Static(String::from("No variants!")));
+        };
         Ok(Product {
-            id: self.id,
+            id: None,
             name,
             price,
+            article,
+            width,
             stock,
             category,
             ms_id,
+            variants,
             created_at: Local::now(),
             active: true,
         })
