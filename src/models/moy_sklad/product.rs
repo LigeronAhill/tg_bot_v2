@@ -232,8 +232,9 @@ pub struct Attribute {
 #[serde(rename_all = "camelCase")]
 pub enum AttributeValue {
     #[default]
-    String,
-    CustomAttributeValue,
+    DefVal,
+    Value(String),
+    CustomAttributeValue(CustomAttributeValue),
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

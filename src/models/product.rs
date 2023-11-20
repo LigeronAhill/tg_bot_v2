@@ -1,4 +1,4 @@
-use super::moy_sklad::product::ProductFromMoySklad;
+use super::moy_sklad::product::{AttributeValue, ProductFromMoySklad};
 use crate::errors::{MyError, Result};
 use chrono::{DateTime, Local};
 use mongodb::bson::oid::ObjectId;
@@ -34,10 +34,21 @@ impl Product {
             Some(art) => art,
             None => String::new(),
         };
+        let mut width = String::new();
+        if let Some(attributes) = product.attributes {
+            for attribute in attributes {
+                if attribute.name.as_str() == "Ширина рулона, м" {
+                    if let AttributeValue::Value(s) = attribute.value {
+                        width = s
+                    }
+                }
+            }
+        }
         let result = ProductBuilder::new()
             .name(product.name)
             .price(base_price)
             .article(article)
+            .width(width)
             .ms_id(product.id)
             .category(product.path_name)
             .variants(product.variants_count)

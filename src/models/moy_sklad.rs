@@ -33,30 +33,30 @@ impl Audit {
                 .json::<ProductFromMoySklad>()
                 .await
                 .map_err(|_| MyError::ReqwestError)?;
-            if result.variants_count != 0 {
-                let url = "https://api.moysklad.ru/api/remap/1.2/entity/variant";
-                let p_id = result.id.clone();
-                let filter = format!("productid={p_id}");
-                let params = [("filter", filter.as_str())];
-                let res: Variants = client
-                    .get(url)
-                    .form(&params)
-                    .bearer_auth(tokens.ms_token.clone())
-                    .send()
-                    .await
-                    .map_err(|_| MyError::ReqwestError)?
-                    .json()
-                    .await
-                    .map_err(|_| MyError::ReqwestError)?;
-                for var in res.rows {
-                    for ch in var.characteristics {
-                        let width = ch.value;
-                        let mut product = Product::from_ms(result.clone())?;
-                        product.width.push(width);
-                        result_slice.push(product)
-                    }
-                }
-            }
+            // if result.variants_count != 0 {
+            //     let url = "https://api.moysklad.ru/api/remap/1.2/entity/variant";
+            //     let p_id = result.id.clone();
+            //     let filter = format!("productid={p_id}");
+            //     let params = [("filter", filter.as_str())];
+            //     let res: Variants = client
+            //         .get(url)
+            //         .form(&params)
+            //         .bearer_auth(tokens.ms_token.clone())
+            //         .send()
+            //         .await
+            //         .map_err(|_| MyError::ReqwestError)?
+            //         .json()
+            //         .await
+            //         .map_err(|_| MyError::ReqwestError)?;
+            //     for var in res.rows {
+            //         for ch in var.characteristics {
+            //             let width = ch.value;
+            //             let mut product = Product::from_ms(result.clone())?;
+            //             product.width.push(width);
+            //             result_slice.push(product)
+            //         }
+            //     }
+            // }
             let product = Product::from_ms(result)?;
             result_slice.push(product);
         }
