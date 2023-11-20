@@ -1,4 +1,4 @@
-use super::moy_sklad::product::{AttributeValue, ProductFromMoySklad};
+use super::moy_sklad::product::ProductFromMoySklad;
 use crate::errors::{MyError, Result};
 use chrono::{DateTime, Local};
 use mongodb::bson::oid::ObjectId;
@@ -38,9 +38,7 @@ impl Product {
         if let Some(attributes) = product.attributes {
             for attribute in attributes {
                 if attribute.name.as_str() == "Ширина рулона, м" {
-                    if let AttributeValue::Value(s) = attribute.value {
-                        width = s
-                    }
+                    width = serde_json::to_string(&attribute.value).unwrap()
                 }
             }
         }

@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -226,23 +227,23 @@ pub struct Attribute {
     pub name: String,
     #[serde(rename = "type")]
     pub type_field: String,
-    pub value: AttributeValue,
+    pub value: Value,
 }
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum AttributeValue {
-    #[default]
-    DefVal,
-    Value(String),
-    CustomAttributeValue(CustomAttributeValue),
-}
+// #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub enum AttributeValue {
+//     CustomAttributeValue(CustomAttributeValue),
+//     #[default]
+//     DefVal,
+//     String(String),
+// }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CustomAttributeValue {
-    pub meta: CustomAttributeValueMeta,
-    pub name: String,
-}
+// #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct CustomAttributeValue {
+//     pub meta: CustomAttributeValueMeta,
+//     pub name: String,
+// }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
