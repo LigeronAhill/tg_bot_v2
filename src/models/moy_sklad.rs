@@ -182,12 +182,12 @@ pub struct ProductFromMoySklad {
     #[serde(rename = "effectiveVat")]
     pub effective_vat: Option<i64>,
     #[serde(rename = "effectiveVatEnabled")]
-    pub effective_vat_enabled: bool,
+    pub effective_vat_enabled: Option<bool>,
     pub vat: Option<i64>,
     #[serde(rename = "vatEnabled")]
-    pub vat_enabled: bool,
+    pub vat_enabled: Option<bool>,
     #[serde(rename = "useParentVat")]
-    pub use_parent_vat: bool,
+    pub use_parent_vat: Option<bool>,
     pub images: Option<Attachments>,
     #[serde(rename = "minPrice")]
     pub min_price: Option<Price>,
