@@ -38,7 +38,7 @@ impl Product {
         if let Some(attributes) = product.attributes {
             for attribute in attributes {
                 if attribute.name.as_str() == "Ширина рулона, м" {
-                    width = serde_json::to_string(&attribute.value).unwrap()
+                    width = attribute.value.to_string()
                 }
             }
         }
