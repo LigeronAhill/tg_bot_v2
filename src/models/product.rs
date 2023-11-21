@@ -11,7 +11,7 @@ pub struct Product {
     pub name: String,
     pub price: i32,
     pub article: String,
-    pub width: Vec<String>,
+    pub width: Vec<String>, // TODO: vec? stock? variants? mb option<string> & no variants?
     pub stock: Vec<f64>,
     pub category: String,
     pub ms_id: Uuid,
@@ -38,11 +38,8 @@ impl Product {
         if let Some(attributes) = product.attributes {
             for attribute in attributes {
                 if attribute.name.as_str() == "Ширина рулона, м" {
-                    width = attribute
-                        .value
-                        .to_string()
-                        .replace("\"", "")
-                        .replace("\\", "")
+                    width = serde_json::from_value(attribute.value)
+                        .map_err(|_| MyError::ProductBuildError)?
                 }
             }
         }
