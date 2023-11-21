@@ -18,7 +18,7 @@ pub async fn telegram(
     State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> Result<StatusCode> {
-    let text: String = match serde_json::from_value(payload) {
+    let text: String = match serde_json::to_string_pretty(&payload) {
         Ok(string) => string,
         Err(_) => "Что-то непонятное пришло".to_string(),
     };
