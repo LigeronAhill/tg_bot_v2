@@ -1,27 +1,24 @@
 use crate::errors::Result;
-use crate::models::moy_sklad::Audit;
-use crate::models::woocommerce::WebhookOrder;
 use crate::models::{product::Product, AppState};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::IntoResponse,
     Json,
 };
 use serde_json::Value;
-use tracing::info;
 
-pub async fn health() -> impl IntoResponse {
+pub async fn health() -> StatusCode {
     StatusCode::OK
 }
 pub async fn telegram(
     State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> Result<StatusCode> {
-    let text: String = match serde_json::to_string_pretty(&payload) {
+    let mut text: String = match serde_json::to_string_pretty(&payload) {
         Ok(string) => string,
         Err(_) => "Что-то непонятное пришло".to_string(),
     };
+    text.push_str("\n\n\n из телеграм");
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
@@ -29,49 +26,39 @@ pub async fn telegram(
 pub async fn ms_webhook(
     State(state): State<AppState>,
     // Json(payload): Json<Option<serde_json::Value>>,
-    Json(payload): Json<Audit>,
-) -> impl IntoResponse {
-    let products = payload
-        .take_product_from_moy_sklad(state.tokens.clone())
-        .await;
-    match products {
-        Ok(products) => {
-            for product in products {
-                let text = format!("{product:#?}");
-                state
-                    .bot
-                    .send_message(state.tokens.my_tg_id, text)
-                    .await
-                    .unwrap();
-            }
-        }
-        Err(_) => {
-            info!("Error getting products from MS");
-        }
-    }
-    StatusCode::OK
+    Json(payload): Json<Value>,
+) -> Result<StatusCode> {
+    let mut text: String = match serde_json::to_string_pretty(&payload) {
+        Ok(string) => string,
+        Err(_) => "Что-то непонятное пришло".to_string(),
+    };
+    text.push_str("\n\n\n из Мой Склад");
+    state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    Ok(StatusCode::OK)
 }
 pub async fn ymwebhook(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<Value>,
-) -> impl IntoResponse {
-    let _text: String = serde_json::from_value(payload).unwrap();
-    StatusCode::OK
+) -> Result<StatusCode> {
+    let mut text: String = match serde_json::to_string_pretty(&payload) {
+        Ok(string) => string,
+        Err(_) => "Что-то непонятное пришло".to_string(),
+    };
+    text.push_str("\n\n\n из ЯндексМаркета");
+    state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    Ok(StatusCode::OK)
 }
 pub async fn woo_webhook(
     State(state): State<AppState>,
     Json(payload): Json<Value>,
-) -> impl IntoResponse {
-    let text = match serde_json::from_value::<WebhookOrder>(payload.clone()) {
-        Ok(order) => format!("{order:#?}"),
-        Err(_) => format!("Order ID: {}\nTotal: {}\n", payload["id"], payload["total"]),
+) -> Result<StatusCode> {
+    let mut text: String = match serde_json::to_string_pretty(&payload) {
+        Ok(string) => string,
+        Err(_) => "Что-то непонятное пришло".to_string(),
     };
-    state
-        .bot
-        .send_message(state.tokens.my_tg_id, text)
-        .await
-        .unwrap();
-    StatusCode::OK
+    text.push_str("\n\n\n из WooCommerce");
+    state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    Ok(StatusCode::OK)
 }
 pub async fn create_product(
     State(app_state): State<AppState>,
