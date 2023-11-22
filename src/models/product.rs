@@ -1,4 +1,3 @@
-use super::moy_sklad::product::ProductFromMoySklad;
 use crate::errors::{MyError, Result};
 use chrono::{DateTime, Local};
 use mongodb::bson::oid::ObjectId;
@@ -11,47 +10,15 @@ pub struct Product {
     pub name: String,
     pub price: i32,
     pub article: String,
-    pub width: Vec<String>, // TODO: vec? stock? variants? mb option<string> & no variants?
     pub stock: Vec<f64>,
     pub category: String,
     pub ms_id: Uuid,
-    pub variants: i64,
     pub created_at: DateTime<Local>,
     pub active: bool,
 }
 impl Product {
-    pub fn from_ms(product: ProductFromMoySklad) -> Result<Self> {
-        let mut base_price = 0;
-        // TODO: currencies!!!
-        // TODO: discount!!!
-        // TODO: archived!!!
-        for price in product.sale_prices {
-            if price.price_type.name.as_str() == "Цена продажи" {
-                base_price = (price.value / 100.00) as i32;
-            }
-        }
-        let article = match product.article {
-            Some(art) => art,
-            None => String::new(),
-        };
-        let mut width = String::new();
-        if let Some(attributes) = product.attributes {
-            for attribute in attributes {
-                if attribute.name.as_str() == "Ширина рулона, м" {
-                    width = serde_json::from_value(attribute.value)
-                        .map_err(|_| MyError::ProductBuildError)?
-                }
-            }
-        }
-        let result = ProductBuilder::new()
-            .name(product.name)
-            .price(base_price)
-            .article(article)
-            .width(width)
-            .ms_id(product.id)
-            .category(product.path_name)
-            .variants(product.variants_count)
-            .build()?;
+    pub fn from_ms(_payload: serde_json::Value) -> Result<Self> {
+        let result = ProductBuilder::new().build()?;
         Ok(result)
     }
 }
@@ -60,11 +27,9 @@ pub struct ProductBuilder {
     pub name: Option<String>,
     pub price: Option<i32>,
     pub article: Option<String>,
-    pub width: Vec<String>,
     pub stock: Vec<f64>,
     pub category: Option<String>,
     pub ms_id: Option<Uuid>,
-    pub variants: Option<i64>,
     pub created_at: Option<DateTime<Local>>,
     pub active: bool,
 }
@@ -85,10 +50,6 @@ impl ProductBuilder {
         self.article = Some(article.into());
         self
     }
-    pub fn width(mut self, width: impl Into<String>) -> Self {
-        self.width.push(width.into());
-        self
-    }
     pub fn stock(mut self, stock: impl Into<f64>) -> Self {
         self.stock.push(stock.into());
         self
@@ -101,39 +62,29 @@ impl ProductBuilder {
         self.ms_id = Uuid::parse_str(&ms_id.into()).ok();
         self
     }
-    pub fn variants(mut self, variants: i64) -> Self {
-        self.variants = Some(variants);
-        self
-    }
     pub fn build(self) -> Result<Product> {
         let Some(name) = self.name.clone() else {
-            return Err(MyError::Static(String::from("No name!")));
+            return Err(MyError::ProductBuildError);
         };
         let Some(article) = self.article.clone() else {
             return Err(MyError::ProductBuildError);
         };
         let Some(category) = self.category.clone() else {
-            return Err(MyError::Static(String::from("No category!")));
+            return Err(MyError::ProductBuildError);
         };
         let price = self.price.unwrap_or(0);
         let stock = self.stock.clone();
-        let width = self.width;
         let Some(ms_id) = self.ms_id else {
             return Err(MyError::Static(String::from("No ms_id!")));
-        };
-        let Some(variants) = self.variants else {
-            return Err(MyError::Static(String::from("No variants!")));
         };
         Ok(Product {
             id: None,
             name,
             price,
             article,
-            width,
             stock,
             category,
             ms_id,
-            variants,
             created_at: Local::now(),
             active: true,
         })

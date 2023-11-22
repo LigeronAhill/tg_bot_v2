@@ -6,7 +6,7 @@ use axum::{
     Json,
 };
 use serde_json::Value;
-
+pub mod ymarket;
 pub async fn health() -> StatusCode {
     StatusCode::OK
 }
@@ -36,18 +36,7 @@ pub async fn ms_webhook(
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
-pub async fn ymwebhook(
-    State(state): State<AppState>,
-    Json(payload): Json<Value>,
-) -> Result<StatusCode> {
-    let mut text: String = match serde_json::to_string_pretty(&payload) {
-        Ok(string) => string,
-        Err(_) => "Что-то непонятное пришло".to_string(),
-    };
-    text.push_str("\n\n\n из ЯндексМаркета");
-    state.bot.send_message(state.tokens.my_tg_id, text).await?;
-    Ok(StatusCode::OK)
-}
+
 pub async fn woo_webhook(
     State(state): State<AppState>,
     Json(payload): Json<Value>,

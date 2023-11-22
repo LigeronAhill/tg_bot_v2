@@ -11,6 +11,7 @@ pub mod errors;
 pub mod models;
 pub mod routes;
 pub mod tg;
+use routes::*;
 
 #[shuttle_runtime::main]
 async fn axum(
@@ -53,17 +54,31 @@ async fn axum(
         },
     };
     let router = Router::new()
-        .route("/health", get(routes::health))
-        .route("/api/v1/telegram", post(routes::telegram))
-        .route("/api/v1/mswebhook", post(routes::ms_webhook))
-        .route("/api/v1/woowebhook", post(routes::woo_webhook))
-        .route("/api/v1/ymwebhook", post(routes::ymwebhook))
-        .route("/api/v1/create", post(routes::create_product))
-        .route("/api/v1/read", get(routes::get_products))
-        .route("/api/v1/read/:id", get(routes::get_product_by_id))
-        .route("/api/v1/find/:name", get(routes::get_product_by_name))
-        .route("/api/v1/update/:id", put(routes::update_product))
-        .route("/api/v1/delete/:id", delete(routes::delete_product))
+        .route("/health", get(health))
+        .route("/api/v1/telegram", post(telegram))
+        .route("/api/v1/mswebhook", post(ms_webhook))
+        .route("/api/v1/woowebhook", post(woo_webhook))
+        .route("/api/v1/ymwebhook", post(routes::ymarket::ymwebhook))
+        .route("/api/v1/ymwebhook/cart", post(routes::ymarket::cart))
+        .route(
+            "/api/v1/ymwebhook/order/accept",
+            post(routes::ymarket::order_accept),
+        )
+        // .route(
+        //     "/api/v1/ymwebhook/order/status",
+        //     post(routes::ymarket::order_status),
+        // )
+        // .route("/api/v1/ymwebhook/stocks", post(routes::ymarket::stocks))
+        // .route(
+        //     "/api/v1/ymwebhook/order/cacellation/notify",
+        //     post(routes::ymarket::notify),
+        // )
+        .route("/api/v1/create", post(create_product))
+        .route("/api/v1/read", get(get_products))
+        .route("/api/v1/read/:id", get(get_product_by_id))
+        .route("/api/v1/find/:name", get(get_product_by_name))
+        .route("/api/v1/update/:id", put(update_product))
+        .route("/api/v1/delete/:id", delete(delete_product))
         .with_state(app_state);
 
     Ok(router.into())
