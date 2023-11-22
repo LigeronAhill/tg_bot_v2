@@ -47,7 +47,7 @@ impl MarketCartResponse {
             });
         }
         let dates = Dates {
-            from_date: from_date.format("&d-%m-%Y").to_string(),
+            from_date: from_date.format("%d-%m-%Y").to_string(),
             to_date: to_date.format("%d-%m-%Y").to_string(),
             intervals,
         };
@@ -56,7 +56,64 @@ impl MarketCartResponse {
             code: OUTLET.to_string(),
         };
         outlets.push(outlet);
-        let payment_methods: Vec<PaymentMethod> = vec![PaymentMethod::YANDEX];
+        let payment_methods: Vec<PaymentMethod> = vec![PaymentMethod::Yandex];
+        let delivery_options = DeliveryOptions {
+            id: String::from("1"),
+            price: 2500.00,
+            service_name: String::from("OWN DELIVERY"),
+            delivery_type: DeliveryType::DELIVERY,
+            dates,
+            outlets,
+            payment_methods: payment_methods.clone(),
+        };
+        Self {
+            cart: ResponseCart {
+                items: new_items,
+                delivery_currency: Currency::RUR,
+                delivery_options,
+                payment_methods,
+            },
+        }
+    }
+    pub fn new_test_struct(response: MarketCartRequest) -> Self {
+        let days_start = Days::new(5);
+        let days_end = Days::new(3);
+        let day = Days::new(1);
+        let from_date = Local::now().checked_add_days(days_start).unwrap();
+        let to_date = from_date.checked_add_days(days_end).unwrap();
+        // .format("%d-%m-%Y")
+        // .to_string();
+        let mut intervals: Vec<Interval> = vec![];
+        let mut dates = vec![];
+        let mut date = from_date;
+        while date <= to_date {
+            dates.push(date);
+            date = date.checked_add_days(day).unwrap();
+        }
+        for date_for_interval in dates {
+            let interval = Interval {
+                date: date_for_interval.format("%d-%m-%Y").to_string(),
+                from_time: FROM_TIME.to_string(),
+                to_time: TO_TIME.to_string(),
+            };
+            intervals.push(interval)
+        }
+        let mut new_items: Vec<ResponseItem> = vec![];
+        for item in response.cart.items {
+            let new_item = ResponseItem::from_request_test(item);
+            new_items.push(new_item)
+        }
+        let dates = Dates {
+            from_date: from_date.format("%d-%m-%Y").to_string(),
+            to_date: to_date.format("%d-%m-%Y").to_string(),
+            intervals,
+        };
+        let mut outlets: Vec<Outlet> = vec![];
+        let outlet = Outlet {
+            code: OUTLET.to_string(),
+        };
+        outlets.push(outlet);
+        let payment_methods: Vec<PaymentMethod> = vec![PaymentMethod::Yandex];
         let delivery_options = DeliveryOptions {
             id: String::from("1"),
             price: 2500.00,
@@ -121,6 +178,15 @@ impl ResponseItem {
             seller_inn: String::from("772878900927"),
         })
     }
+    fn from_request_test(item: Item) -> Self {
+        Self {
+            feed_id: item.feed_id,
+            offer_id: item.offer_id,
+            count: item.count,
+            delivery: true,
+            seller_inn: String::from("772878900927"),
+        }
+    }
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -160,11 +226,11 @@ pub enum PaymentMethod {
     CardOnDelivery,
     CashOnDelivery,
     GooglePay,
-    SBP,
+    Sbp,
     TinkoffCredit,
     TinkoffInstallments,
     #[default]
-    YANDEX,
+    Yandex,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -212,13 +278,13 @@ pub struct Region {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Address {
-    pub country: String,
-    pub city: String,
-    pub subway: String,
-    pub street: String,
-    pub house: String,
-    pub block: String,
-    pub floor: String,
+    pub country: Option<String>,
+    pub city: Option<String>,
+    pub subway: Option<String>,
+    pub street: Option<String>,
+    pub house: Option<String>,
+    pub block: Option<String>,
+    pub floor: Option<String>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
 }
@@ -242,20 +308,20 @@ pub enum Currency {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RegionType {
     #[default]
-    CITY,
+    City,
     CityDistrict,
-    CONTINENT,
-    COUNTRY,
+    Continent,
+    Country,
     CountryDistrict,
     MetroStation,
     MonorailStation,
     OthersUniversal,
     OverseasTerritory,
-    REGION,
+    Region,
     SecondaryDistrict,
-    SETTLEMENT,
+    Settlement,
     SubjectFederation,
     SubjectFederationDistrict,
-    SUBURB,
-    VILLAGE,
+    Suburb,
+    Village,
 }
