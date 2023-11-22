@@ -1,13 +1,15 @@
 use crate::{
     errors::Result,
-    models::{market::MarketCartResponse, AppState},
+    models::{
+        market::{MarketCartRequest, MarketCartResponse},
+        AppState,
+    },
 };
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
     Json,
 };
-use serde_json::Value;
 
 fn check_token(headers: HeaderMap) -> bool {
     let my_token = "2445D16D457F43A3AE3C2F484DDA31021F000001998BF23F";
@@ -26,7 +28,7 @@ pub async fn ymwebhook(headers: HeaderMap) -> Result<StatusCode> {
 pub async fn cart(
     headers: HeaderMap,
     State(_state): State<AppState>,
-    Json(payload): Json<Value>,
+    Json(payload): Json<MarketCartRequest>,
 ) -> Result<Json<MarketCartResponse>> {
     if !check_token(headers) {
         return Err(crate::errors::MyError::TokenError);
@@ -36,7 +38,7 @@ pub async fn cart(
 }
 pub async fn cart_for_test(
     headers: HeaderMap,
-    Json(payload): Json<Value>,
+    Json(payload): Json<MarketCartRequest>,
 ) -> Result<Json<MarketCartResponse>> {
     if !check_token(headers) {
         return Err(crate::errors::MyError::TokenError);
