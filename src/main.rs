@@ -38,6 +38,7 @@ async fn axum(
         .get("WOO_TOKEN_2")
         .expect("no woocommerce token!");
     let yandex_token = secret_store.get("YANDEX_TOKEN").expect("no yandex token!");
+
     let market_token = secret_store.get("MARKET_TOKEN").expect("no market token");
     storage
         .name_index_create()
