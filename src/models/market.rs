@@ -3,6 +3,8 @@ use chrono::Local;
 use serde::Deserialize;
 use serde::Serialize;
 pub mod order;
+pub mod order_status;
+pub mod stock;
 const FROM_TIME: &str = "10:00";
 const TO_TIME: &str = "21:00";
 const OUTLET: &str = "1";

@@ -9,6 +9,7 @@ pub struct AcceptResponse {
     pub order: AcceptOrder,
 }
 impl AcceptResponse {
+    // TODO: -- days, id!!!
     pub fn new() -> Self {
         let now = Local::now();
         let day = chrono::Days::new(5);
@@ -37,6 +38,16 @@ pub struct AcceptOrder {
 #[serde(rename_all = "camelCase")]
 pub struct DeclineResponse {
     pub order: DeclineOrder,
+}
+impl DeclineResponse {
+    pub fn new() -> Self {
+        Self {
+            order: DeclineOrder {
+                accepted: false,
+                reason: String::from("OUT_OF_DATE"),
+            },
+        }
+    }
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
