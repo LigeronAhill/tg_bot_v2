@@ -1,7 +1,10 @@
 use crate::{
     errors::Result,
     models::{
-        market::{order::OrderAccept, MarketCartRequest, MarketCartResponse},
+        market::{
+            order::{AcceptResponse, OrderAccept},
+            MarketCartRequest, MarketCartResponse,
+        },
         AppState,
     },
 };
@@ -55,12 +58,13 @@ pub async fn order_accept(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(payload): Json<OrderAccept>,
-) -> Result<StatusCode> {
+) -> Result<Json<AcceptResponse>> {
     if !check_token(headers, state.tokens.yandex_token) {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(crate::errors::MyError::TokenError);
     }
     let _ = payload;
-    Ok(StatusCode::OK)
+
+    Ok(Json(AcceptResponse::new()))
 }
 pub async fn order_accept_for_test(
     headers: HeaderMap,
@@ -233,84 +237,6 @@ mod tests {
                 "total": 6000,
                 "totalWithSubsidy": 6150,
                 "deliveryTotal": 350,
-                "delivery": {
-                    "price": 340,
-                    "region_id": "213",
-                    "serviceName": "СПСР",
-                    "type": "DELIVERY",
-                    "dispatchType": "BUYER",
-                    "liftType": "MANUAL",
-                    "liftPrice": 10,
-                    "vat": "VAT_10",
-                    "shipments": [
-                        {
-                            "id": 90141,
-                            "status": "CREATED",
-                            "depth": 22,
-                            "height": 22,
-                            "weight": 2000,
-                            "width": 22,
-                            "boxes": [],
-                            "shipmentDate": "14-09-2020"
-                        }
-                    ],
-                    "address": {
-                        "country": "Россия",
-                        "city": "Москва",
-                        "subway": "Проспект Вернадского",
-                        "street": "Ленинский проспект",
-                        "house": "90",
-                        "floor": "6",
-                        "lon": 59.963648,
-                        "lat": 30.403774,
-                        "notes": "вход со двора",
-                        "outletPhones": [
-                            "7-495-2234562",
-                            "8-812-1234567 890"
-                        ],
-                        "schedule": [
-                            {
-                                "fromDay": "MONDAY",
-                                "toDay": "MONDAY",
-                                "fromTime": "09:00",
-                                "toTime": "21-00"
-                            },
-                            {
-                                "fromDay": "TUESDAY",
-                                "toDay": "TUESDAY",
-                                "fromTime": "09:00",
-                                "toTime": "21:00"
-                            }
-                        ]
-                    },
-                    "dates": {
-                        "fromDate": "15-09-2020",
-                        "toDate": "15-09-2020",
-                        "fromTime": "09:00",
-                        "toTime": "21:00"
-                    },
-                    "subsidy": 300,
-                    "region": {
-                        "id": 213,
-                        "name": "Москва",
-                        "type": "CITY",
-                        "parent": {
-                            "id": 1,
-                            "name": "Москва и Московская область",
-                            "type": "SUBJECT_FEDERATION",
-                            "parent": {
-                                "id": 3,
-                                "name": "Центральный федеральный округ",
-                                "type": "COUNTRY_DISTRICT",
-                                "parent": {
-                                    "id": 225,
-                                    "name": "Россия",
-                                    "type": "COUNTRY"
-                                }
-                            }
-                        }
-                    }
-                },
                 "items": [
                     {
                         "count": 3,

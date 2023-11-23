@@ -1,6 +1,49 @@
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 
 use super::{Address, Currency, DeliveryType, Outlet, PaymentMethod, Region};
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcceptResponse {
+    pub order: AcceptOrder,
+}
+impl AcceptResponse {
+    pub fn new() -> Self {
+        let now = Local::now();
+        let day = chrono::Days::new(5);
+        let shipment_date = now
+            .checked_add_days(day)
+            .unwrap()
+            .format("%d-%m-%Y")
+            .to_string();
+        Self {
+            order: AcceptOrder {
+                accepted: true,
+                id: "696969".to_string(),
+                shipment_date,
+            },
+        }
+    }
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcceptOrder {
+    pub accepted: bool,
+    pub id: String,
+    pub shipment_date: String,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeclineResponse {
+    pub order: DeclineOrder,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeclineOrder {
+    pub accepted: bool,
+    pub reason: String,
+}
 
 // -------------------------------FROM MARKET-------------------------------------
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -39,7 +82,7 @@ pub struct Item {
     pub offer_id: String,
     pub offer_name: String,
     pub feed_category_id: String,
-    pub fulfilment_shop_id: Option<String>,
+    pub fulfilment_shop_id: Option<i64>,
     pub count: i32,
     pub price: Option<f64>,
     #[serde(rename = "buyer-price")]
