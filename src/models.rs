@@ -17,4 +17,6 @@ pub struct Tokens {
     pub ms_token: String,
     pub woo_token_1: String,
     pub woo_token_2: String,
+    pub yandex_token: String,
+    pub market_token: String,
 }

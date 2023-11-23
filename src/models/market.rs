@@ -2,7 +2,7 @@ use chrono::Days;
 use chrono::Local;
 use serde::Deserialize;
 use serde::Serialize;
-
+pub mod order;
 const FROM_TIME: &str = "10:00";
 const TO_TIME: &str = "21:00";
 const OUTLET: &str = "1";
@@ -13,7 +13,7 @@ pub struct MarketCartResponse {
     pub cart: ResponseCart,
 }
 impl MarketCartResponse {
-    pub fn new(response: MarketCartRequest) -> Self {
+    pub fn new(request: MarketCartRequest) -> Self {
         let days_start = Days::new(5);
         let days_end = Days::new(3);
         let day = Days::new(1);
@@ -37,7 +37,11 @@ impl MarketCartResponse {
             intervals.push(interval)
         }
         let mut new_items: Vec<ResponseItem> = vec![];
-        for item in response.cart.items {
+        let req_items = match request.cart.items {
+            Some(items) => items,
+            None => vec![],
+        };
+        for item in req_items {
             let new_item = ResponseItem::from_request(item);
             new_items.push(new_item)
         }
@@ -55,7 +59,7 @@ impl MarketCartResponse {
         let delivery_options = DeliveryOptions {
             id: String::from("1"),
             price: 2500.00,
-            service_name: String::from("OWN DELIVERY"),
+            service_name: String::from("Собственная служба"),
             delivery_type: DeliveryType::DELIVERY,
             dates,
             outlets,
@@ -85,6 +89,7 @@ pub struct ResponseCart {
 #[serde(rename_all = "camelCase")]
 pub struct ResponseItem {
     pub feed_id: i64,
+    /// sku
     pub offer_id: String,
     pub count: i32,
     pub delivery: bool,
@@ -144,6 +149,9 @@ pub enum PaymentMethod {
     TinkoffInstallments,
     #[default]
     Yandex,
+    Credit,
+    ExternalCertificate,
+    B2bAccountPrepayment,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -152,8 +160,9 @@ pub enum DeliveryType {
     DELIVERY,
     PICKUP,
     DIGITAL,
+    POST,
 }
-// region start: -------------------FROM MARKET-----------------------------------
+//  -------------------FROM MARKET-----------------------------------
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketCartRequest {
@@ -163,28 +172,28 @@ pub struct MarketCartRequest {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Cart {
-    pub business_id: i64,
-    pub currency: Currency,
-    pub delivery_currency: Currency,
-    pub delivery: Delivery,
-    pub items: Vec<Item>,
+    pub business_id: Option<i64>,
+    pub currency: Option<Currency>,
+    pub delivery_currency: Option<Currency>,
+    pub delivery: Option<Delivery>,
+    pub items: Option<Vec<Item>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Delivery {
     pub estimated: Option<bool>,
-    pub region: Region,
+    pub region: Option<Region>,
     pub address: Option<Address>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Region {
-    pub id: i32,
-    pub name: String,
+    pub id: Option<i32>,
+    pub name: Option<String>,
     #[serde(rename = "type")]
-    pub type_field: RegionType,
+    pub type_field: Option<RegionType>,
     pub parent: Option<Box<Region>>,
 }
 
@@ -200,17 +209,29 @@ pub struct Address {
     pub floor: Option<String>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
+    pub notes: Option<String>,
+    pub outlet_phones: Option<Vec<String>>,
+    pub schedule: Option<Vec<Schedule>>,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Schedule {
+    pub from_day: Option<String>,
+    pub to_day: Option<String>,
+    pub from_time: Option<String>,
+    pub to_time: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Item {
     pub feed_id: i64,
+    /// sku
     pub offer_id: String,
     pub count: i32,
     pub offer_name: String,
     pub feed_category_id: String,
-    pub fulfilment_shop_id: i64,
+    pub fulfilment_shop_id: Option<i64>,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Currency {

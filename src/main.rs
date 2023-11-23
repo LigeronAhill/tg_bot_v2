@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 use db::Storage;
@@ -37,6 +38,8 @@ async fn axum(
     let woo_token_2 = secret_store
         .get("WOO_TOKEN_2")
         .expect("no woocommerce token!");
+    let yandex_token = secret_store.get("YANDEX_TOKEN").expect("no yandex token!");
+    let market_token = secret_store.get("market_token").expect("no market token");
     storage
         .name_index_create()
         .await
@@ -51,6 +54,8 @@ async fn axum(
             ms_token,
             woo_token_1,
             woo_token_2,
+            yandex_token,
+            market_token,
         },
     };
     let router = Router::new()
