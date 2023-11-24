@@ -69,15 +69,15 @@ async fn axum(
             "/api/v1/ymwebhook/order/accept",
             post(routes::ymarket::order_accept),
         )
-        // .route(
-        //     "/api/v1/ymwebhook/order/status",
-        //     post(routes::ymarket::order_status),
-        // )
-        // .route("/api/v1/ymwebhook/stocks", post(routes::ymarket::stocks))
-        // .route(
-        //     "/api/v1/ymwebhook/order/cacellation/notify",
-        //     post(routes::ymarket::notify),
-        // )
+        .route(
+            "/api/v1/ymwebhook/order/status",
+            post(routes::ymarket::order_status),
+        )
+        .route("/api/v1/ymwebhook/stocks", post(routes::ymarket::stocks))
+        .route(
+            "/api/v1/ymwebhook/order/cancellation/notify",
+            post(routes::ymarket::order_cancelation_notify),
+        )
         .route("/api/v1/create", post(create_product))
         .route("/api/v1/read", get(get_products))
         .route("/api/v1/read/:id", get(get_product_by_id))

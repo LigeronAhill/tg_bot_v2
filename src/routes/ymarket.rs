@@ -3,6 +3,8 @@ use crate::{
     models::{
         market::{
             order::{AcceptResponse, OrderAccept},
+            order_status::OrderStatus,
+            stock::{StocksRequest, StocksResponse},
             MarketCartRequest, MarketCartResponse,
         },
         AppState,
@@ -75,6 +77,61 @@ pub async fn order_accept_for_test(
     }
     let _ = payload;
     Ok(StatusCode::OK)
+}
+pub async fn order_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<OrderStatus>,
+) -> Result<StatusCode> {
+    if !check_token(headers, state.tokens.yandex_token) {
+        return Err(crate::errors::MyError::TokenError);
+    }
+    let _ = payload;
+
+    Ok(StatusCode::OK)
+}
+pub async fn order_status_for_test(
+    headers: HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<StatusCode> {
+    if !check_token(headers, TEST_TOKEN.to_string()) {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+    let _ = payload;
+    Ok(StatusCode::OK)
+}
+pub async fn order_cancelation_notify(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<OrderStatus>,
+) -> Result<StatusCode> {
+    if !check_token(headers, state.tokens.yandex_token) {
+        return Err(crate::errors::MyError::TokenError);
+    }
+    let _ = payload;
+
+    Ok(StatusCode::OK)
+}
+pub async fn order_cancelation_notify_for_test(
+    headers: HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<StatusCode> {
+    if !check_token(headers, TEST_TOKEN.to_string()) {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+    let _ = payload;
+    Ok(StatusCode::OK)
+}
+pub async fn stocks(
+    headers: HeaderMap,
+    State(state): State<AppState>,
+    Json(payload): Json<StocksRequest>,
+) -> Result<Json<StocksResponse>> {
+    if !check_token(headers, state.tokens.yandex_token) {
+        return Err(crate::errors::MyError::TokenError);
+    }
+    let resp = StocksResponse::test(payload);
+    Ok(Json(resp))
 }
 
 #[cfg(test)]
@@ -287,6 +344,117 @@ mod tests {
                 Request::builder()
                     .method(http::Method::POST)
                     .uri("/api/v1/ymwebhook/order/accept")
+                    .header("Content-Type".to_string(), "application/json".to_string())
+                    .header(k.clone(), v.clone())
+                    .body(Body::from(serde_json::to_string(&test_response).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response_without_headers.status(), StatusCode::FORBIDDEN);
+        assert_eq!(response_with_headers.status(), StatusCode::OK);
+    }
+    #[tokio::test]
+    async fn order_status_test() {
+        let test_response = json!({
+          "order":
+          {
+            "businessId": 95291,
+            "creationDate": "15-09-2020 00:42:42",
+            "currency": "RUR",
+            "fake": false,
+            "id": 12345,
+            "paymentType": "PREPAID",
+            "paymentMethod": "YANDEX",
+            "status": "PROCESSING",
+            "taxSystem": "OSN",
+            "subsidyTotal": 150,
+            "buyerItemsTotalBeforeDiscount": 5800,
+            "buyerTotalBeforeDiscount": 6150,
+            "buyerItemsTotal": 5650,
+            "buyerTotal": 6000,
+            "itemsTotal": 5650,
+            "total": 6000,
+            "totalWithSubsidy": 6150,
+            "deliveryTotal": 350,
+            "buyer":
+            {
+              "id": "LEgMQuuxR8",
+              "lastName": "Иванов",
+              "firstName": "Иван",
+              "middleName": "Иванович"
+            },
+            "delivery":
+            {
+              "price": 350,
+              "serviceName": "СПСР",
+              "type": "DELIVERY",
+              "dispatchType": "BUYER",
+              "vat": "VAT_10",
+              "address":
+              {
+                "country": "Россия",
+                "city": "Москва",
+                "subway": "Проспект Вернадского",
+                "street": "Ленинский проспект",
+                "house": "90",
+                "floor": "6"
+              },
+              "dates":
+              {
+                "fromDate": "15-09-2020",
+                "toDate": "15-09-2020",
+                "fromTime": "09:00",
+                "toTime": "21:00"
+              },
+
+            },
+            "items":
+            [
+               {
+                "count": 1,
+                "feedCategoryId": "41",
+                "fulfilmentShopId": 1234567,
+                "feedId": 12345,
+                "offerId": "4607632101",
+                "offerName": "Тостер",
+                "price": 2200,
+                "buyer-price": 2200,
+                "buyerPriceBeforeDiscount": 2200,
+                "priceBeforeDiscount": 1200,
+                "subsidy": 0,
+                "vat": "VAT_20"
+              }
+            ],
+            "notes": "Не работает звонок. Пожалуйста, стучите."
+          }
+        }
+        );
+
+        let app = Router::new().route(
+            "/api/v1/ymwebhook/order/status",
+            post(order_status_for_test),
+        );
+        let k = "Authorization".to_string();
+        let v = TEST_TOKEN.to_string();
+        let response_without_headers = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ymwebhook/order/status")
+                    .header("Content-Type".to_string(), "application/json".to_string())
+                    .body(Body::from(serde_json::to_string(&test_response).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let response_with_headers = app
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ymwebhook/order/status")
                     .header("Content-Type".to_string(), "application/json".to_string())
                     .header(k.clone(), v.clone())
                     .body(Body::from(serde_json::to_string(&test_response).unwrap()))
