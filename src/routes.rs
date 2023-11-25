@@ -39,9 +39,10 @@ pub async fn ms_webhook(
 
 pub async fn woo_webhook(
     State(state): State<AppState>,
-    Json(payload): Json<Option<Value>>,
+    payload: Option<Json<Value>>,
 ) -> Result<StatusCode> {
     if payload.is_some() {
+        let Json(payload) = payload.unwrap();
         let mut text: String = match serde_json::to_string_pretty(&payload) {
             Ok(string) => string,
             Err(_) => "Что-то непонятное пришло".to_string(),
