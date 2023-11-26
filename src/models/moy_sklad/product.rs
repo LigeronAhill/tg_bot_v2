@@ -2,14 +2,14 @@ use chrono::DateTime;
 use chrono::Local;
 use serde::Deserialize;
 use serde::Serialize;
-use uuid::Uuid;
+// use uuid::Uuid;
 
 use super::Meta;
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductFromMoySklad {
     /// ID учетной записи
-    pub account_id: Uuid,
+    pub account_id: String,
     pub alcoholic: Option<Alcoholic>,
     pub archived: bool,
     pub article: Option<String>,
@@ -29,7 +29,7 @@ pub struct ProductFromMoySklad {
     pub files: Option<Meta>,
     /// Метаданные отдела сотрудника
     pub group: Meta,
-    pub id: Uuid,
+    pub id: String,
     pub images: Option<Meta>,
     pub is_serial_trackable: Option<bool>,
     pub meta: Meta,
@@ -50,7 +50,7 @@ pub struct ProductFromMoySklad {
     pub sale_prices: Option<Vec<SalePrice>>,
     pub shared: bool,
     pub supplier: Option<Meta>,
-    pub sync_id: Option<Uuid>,
+    pub sync_id: Option<String>,
     pub tax_system: Option<TaxSystem>,
     /// Серийные номера
     pub things: Option<Vec<String>>,
@@ -117,7 +117,7 @@ pub struct Price {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Pack {
     pub barcodes: Option<Vec<BarCode>>,
-    pub id: Option<Uuid>,
+    pub id: Option<String>,
     pub quantity: Option<f64>,
     pub uom: Option<Meta>,
 }
@@ -140,7 +140,7 @@ pub struct SalePrice {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PriceType {
     pub meta: Meta,
-    pub id: Uuid,
+    pub id: String,
     pub name: String,
     pub external_code: String,
 }
