@@ -135,7 +135,14 @@ pub enum PaymentItemType {
 pub struct SalePrice {
     pub value: f64,
     pub currency: Meta,
-    pub price_type: Meta,
+    pub price_type: PriceType,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PriceType {
+    pub meta: Meta,
+    pub id: Uuid,
+    pub name: String,
+    pub external_code: String,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
