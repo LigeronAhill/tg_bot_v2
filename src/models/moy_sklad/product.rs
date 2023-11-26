@@ -106,6 +106,7 @@ pub struct Attribute {
 pub enum AttributeValue {
     #[default]
     DefaultValue,
+    Meta(Meta),
     Dictionary(Dictionary),
     String(String),
     Int(i64),
