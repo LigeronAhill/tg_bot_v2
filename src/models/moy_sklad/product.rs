@@ -1,8 +1,5 @@
-use chrono::DateTime;
-use chrono::Local;
 use serde::Deserialize;
 use serde::Serialize;
-// use uuid::Uuid;
 
 use super::Meta;
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -57,7 +54,7 @@ pub struct ProductFromMoySklad {
     pub tnved: Option<String>,
     pub tracking_type: Option<TrackingType>,
     pub uom: Option<Meta>,
-    pub updated: DateTime<Local>,
+    pub updated: String,
     pub use_parent_vat: bool,
     pub variants_count: i64,
     pub vat: Option<i64>,
@@ -113,7 +110,6 @@ pub enum AttributeValue {
     String(String),
     Int(i64),
     Float(f64),
-    Date(DateTime<Local>),
     Flag(bool),
 }
 
