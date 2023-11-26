@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 
 use super::Meta;
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -99,7 +100,7 @@ pub struct Attribute {
     pub name: String,
     #[serde(rename = "type")]
     pub type_field: String,
-    pub value: AttributeValue,
+    pub value: Value,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
