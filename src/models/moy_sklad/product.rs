@@ -59,8 +59,8 @@ pub struct ProductFromMoySklad {
     pub variants_count: i64,
     pub vat: Option<i64>,
     pub vat_enabled: Option<bool>,
-    pub volume: Option<i64>,
-    pub weight: Option<i64>,
+    pub volume: Option<f64>,
+    pub weight: Option<f64>,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Owner {
