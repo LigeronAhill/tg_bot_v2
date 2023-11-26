@@ -1,7 +1,7 @@
 use crate::{db::Storage, tg::Bot};
 
 pub mod market;
-// pub mod moy_sklad;
+pub mod moy_sklad;
 pub mod product;
 // pub mod woocommerce;
 #[derive(Clone)]

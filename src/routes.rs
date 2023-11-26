@@ -1,4 +1,5 @@
 use crate::errors::Result;
+use crate::models::moy_sklad::Audit;
 use crate::models::{product::Product, AppState};
 use axum::{
     extract::{Path, State},
@@ -25,14 +26,17 @@ pub async fn telegram(
 
 pub async fn ms_webhook(
     State(state): State<AppState>,
-    // Json(payload): Json<Option<serde_json::Value>>,
     Json(payload): Json<Value>,
 ) -> Result<StatusCode> {
-    let mut text: String = match serde_json::to_string_pretty(&payload) {
-        Ok(string) => string,
-        Err(_) => "Что-то непонятное пришло".to_string(),
+    let text = match serde_json::from_value::<Audit>(payload.clone()) {
+        Ok(audit) => {
+            format!("Update: {audit:#?}")
+        }
+        Err(_) => match serde_json::to_string_pretty(&payload) {
+            Ok(str) => str,
+            Err(_) => String::from("something went wrong"),
+        },
     };
-    text.push_str("\n\n\n из Мой Склад");
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
