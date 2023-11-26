@@ -24,8 +24,8 @@ impl Audit {
                 .send()
                 .await?;
             let product = response.json::<ProductFromMoySklad>().await?;
-            let str_product = format!("{product:#?}\n");
-            result.push(str_product)
+            // let str_product = format!("{product:#?}\n");
+            result.push(product.name)
         }
         Ok(result.join("\n"))
     }

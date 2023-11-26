@@ -104,23 +104,6 @@ pub struct Attribute {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AttributeValue {
-    #[default]
-    DefaultValue,
-    Meta(Meta),
-    Dictionary(Dictionary),
-    String(String),
-    Int(i64),
-    Float(f64),
-    Flag(bool),
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Dictionary {
-    pub meta: Meta,
-    pub name: String,
-}
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BarCode {
     pub ean13: Option<String>,
     pub ean8: Option<String>,

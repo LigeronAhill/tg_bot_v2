@@ -26,24 +26,36 @@ pub async fn telegram(
 
 pub async fn ms_webhook(
     State(state): State<AppState>,
-    Json(payload): Json<Value>,
+    Json(payload): Json<Audit>,
 ) -> Result<StatusCode> {
-    let text = match serde_json::from_value::<Audit>(payload.clone()) {
-        Ok(audit) => {
-            // format!("Update: {audit:#?}")
-            match audit.test_get_product(state.clone()).await {
-                Ok(str) => str,
-                Err(e) => e.to_string(),
-            }
-        }
-        Err(_) => match serde_json::to_string_pretty(&payload) {
-            Ok(str) => str,
-            Err(_) => String::from("something went wrong"),
-        },
+    let text = match payload.test_get_product(state.clone()).await {
+        Ok(str) => str,
+        Err(e) => e.to_string(),
     };
+
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
+// pub async fn ms_webhook(
+//     State(state): State<AppState>,
+//     Json(payload): Json<Value>,
+// ) -> Result<StatusCode> {
+//     let text = match serde_json::from_value::<Audit>(payload.clone()) {
+//         Ok(audit) => {
+//             // format!("Update: {audit:#?}")
+//             match audit.test_get_product(state.clone()).await {
+//                 Ok(str) => str,
+//                 Err(e) => e.to_string(),
+//             }
+//         }
+//         Err(_) => match serde_json::to_string_pretty(&payload) {
+//             Ok(str) => str,
+//             Err(_) => String::from("something went wrong"),
+//         },
+//     };
+//     state.bot.send_message(state.tokens.my_tg_id, text).await?;
+//     Ok(StatusCode::OK)
+// }
 
 pub async fn woo_webhook(
     State(state): State<AppState>,
