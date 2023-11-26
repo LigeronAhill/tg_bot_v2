@@ -30,7 +30,8 @@ pub async fn ms_webhook(
 ) -> Result<StatusCode> {
     let text = match serde_json::from_value::<Audit>(payload.clone()) {
         Ok(audit) => {
-            format!("Update: {audit:#?}")
+            // format!("Update: {audit:#?}")
+            audit.test_get_product(state.clone()).await
         }
         Err(_) => match serde_json::to_string_pretty(&payload) {
             Ok(str) => str,
