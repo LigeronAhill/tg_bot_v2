@@ -10,7 +10,7 @@ use super::Meta;
 pub struct ProductFromMoySklad {
     /// ID учетной записи
     pub account_id: Uuid,
-    pub alcoholic: Option<Alchogolic>,
+    pub alcoholic: Option<Alcoholic>,
     pub archived: bool,
     pub article: Option<String>,
     pub attributes: Option<Vec<Attribute>>,
@@ -66,7 +66,7 @@ pub struct ProductFromMoySklad {
     pub weight: Option<i64>,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Alchogolic {
+pub struct Alcoholic {
     pub excize: Option<bool>,
     #[serde(rename = "type")]
     pub alchogole_type: Option<i64>,

@@ -17,7 +17,7 @@ impl Audit {
         let mut result: Vec<String> = vec![];
         for event in &self.events {
             let uri = event.meta.href.as_ref().unwrap();
-            let client = reqwest::Client::new();
+            let client = reqwest::Client::builder().gzip(true).build().unwrap();
             let Ok(response) = client
                 .get(uri)
                 .bearer_auth(&app_state.tokens.ms_token)
