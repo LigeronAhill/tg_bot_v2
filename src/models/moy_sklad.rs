@@ -24,8 +24,12 @@ impl Audit {
                 .send()
                 .await?;
             let product = response.json::<ProductFromMoySklad>().await?;
-            // let str_product = format!("{product:#?}\n");
-            result.push(product.name)
+            if !product.path_name.contains("Не для интернета")
+                && !product.path_name.contains("Услуги")
+                && !product.path_name.contains("Сопутствующие товары")
+            {
+                result.push(product.name)
+            }
         }
         Ok(result.join("\n"))
     }
