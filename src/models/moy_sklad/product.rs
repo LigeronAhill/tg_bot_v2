@@ -155,6 +155,7 @@ pub struct SalePrice {
     pub price_type: PriceType,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PriceType {
     pub meta: Meta,
     pub id: String,
