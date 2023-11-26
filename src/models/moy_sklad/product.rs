@@ -26,17 +26,17 @@ pub struct ProductFromMoySklad {
     pub effective_vat: Option<i64>,
     pub effective_vat_enabled: Option<bool>,
     pub external_code: String,
-    pub files: Option<Meta>,
+    pub files: Option<Files>,
     /// Метаданные отдела сотрудника
-    pub group: Meta,
+    pub group: Group,
     pub id: String,
-    pub images: Option<Meta>,
+    pub images: Option<Images>,
     pub is_serial_trackable: Option<bool>,
     pub meta: Meta,
     pub min_price: Option<Price>,
     pub minimum_balance: Option<i64>,
     pub name: String,
-    pub owner: Option<Meta>,
+    pub owner: Option<Owner>,
     /// Упаковки Товара
     pub packs: Option<Vec<Pack>>,
     /// Управление состоянием частичного выбытия маркированного товара. «true» - возможность включена.
@@ -46,7 +46,7 @@ pub struct ProductFromMoySklad {
     pub payment_item_type: Option<PaymentItemType>,
     pub ppe_type: Option<i64>,
     /// Метаданные группы Товара
-    pub product_folder: Option<Meta>,
+    pub product_folder: Option<ProductFolder>,
     pub sale_prices: Option<Vec<SalePrice>>,
     pub shared: bool,
     pub supplier: Option<Meta>,
@@ -66,6 +66,27 @@ pub struct ProductFromMoySklad {
     pub weight: Option<i64>,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Owner {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Files {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Images {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Group {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProductFolder {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Alcoholic {
     pub excize: Option<bool>,
     #[serde(rename = "type")]
