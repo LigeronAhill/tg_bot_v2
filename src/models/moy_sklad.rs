@@ -1,7 +1,7 @@
+use self::product::ProductFromMoySklad;
+use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
-
-use self::product::ProductFromMoySklad;
 
 use super::AppState;
 pub mod product;
@@ -13,26 +13,21 @@ pub struct Audit {
 }
 
 impl Audit {
-    pub async fn test_get_product(&self, app_state: AppState) -> String {
+    pub async fn test_get_product(&self, app_state: AppState) -> Result<String> {
         let mut result: Vec<String> = vec![];
         for event in &self.events {
             let uri = event.meta.href.as_ref().unwrap();
-            let client = reqwest::Client::builder().gzip(true).build().unwrap();
-            let Ok(response) = client
+            let client = reqwest::Client::builder().gzip(true).build()?;
+            let response = client
                 .get(uri)
                 .bearer_auth(&app_state.tokens.ms_token)
                 .send()
-                .await
-            else {
-                return String::from("Reqwest failed");
-            };
-            let Ok(product) = response.json::<ProductFromMoySklad>().await else {
-                return String::from("Can't parse JSON");
-            };
+                .await?;
+            let product = response.json::<ProductFromMoySklad>().await?;
             let str_product = format!("{product:#?}\n");
             result.push(str_product)
         }
-        result.join("\n")
+        Ok(result.join("\n"))
     }
 }
 
