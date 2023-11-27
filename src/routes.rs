@@ -1,7 +1,6 @@
 use crate::errors::Result;
 use crate::models::moy_sklad::Audit;
 use crate::models::{product::Product, AppState};
-use axum::http::HeaderMap;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -46,29 +45,20 @@ pub async fn ms_webhook(
 
 pub async fn woo_webhook(
     State(state): State<AppState>,
-    headers: HeaderMap,
-    _payload: Option<Json<Value>>,
+    payload: Option<Json<Value>>,
 ) -> Result<StatusCode> {
-    // if check_token()
-    // if payload.is_some() {
-    //     let Json(payload) = payload.unwrap();
-    //     let mut text: String = match serde_json::to_string_pretty(&payload) {
-    //         Ok(string) => string,
-    //         Err(_) => "Что-то непонятное пришло".to_string(),
-    //     };
-    //     text.push_str("\n\n\n из WooCommerce");
-    //     state.bot.send_message(state.tokens.my_tg_id, text).await?;
-    // }
-    let mut text = String::new();
-    for (key, value) in headers {
-        if let Some(h) = key {
-            text.push_str(h.as_str());
-            text.push_str(" : ");
-            text.push_str(value.to_str().unwrap_or("None\n"));
-        }
+    if payload.is_some() {
+        let Json(payload) = payload.unwrap();
+        let x = payload["name"].clone();
+        let mut text: String = match serde_json::to_string(&x) {
+            Ok(string) => string,
+            Err(_) => "Что-то непонятное пришло".to_string(),
+        };
+        text.push_str("\n\n\n из WooCommerce");
+        state.bot.send_message(state.tokens.my_tg_id, text).await?;
     }
 
-    state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    // state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
 pub async fn create_product(
