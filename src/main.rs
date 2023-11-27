@@ -63,6 +63,7 @@ async fn axum(
         .route("/api/v1/telegram", post(telegram))
         .route("/api/v1/mswebhook", post(ms_webhook))
         .route("/api/v1/woowebhook", post(woo_webhook))
+        .route("/api/v1/wooproduct", post(woo_product))
         .route("/api/v1/ymwebhook", post(routes::ymarket::ymwebhook))
         .route("/api/v1/ymwebhook/cart", post(routes::ymarket::cart))
         .route(

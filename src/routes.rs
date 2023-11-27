@@ -42,6 +42,22 @@ pub async fn ms_webhook(
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
+pub async fn woo_product(
+    State(state): State<AppState>,
+    payload: Option<Json<Value>>,
+) -> Result<StatusCode> {
+    if payload.is_some() {
+        let Json(payload) = payload.unwrap();
+        let x = payload["sku"].clone();
+        let mut text: String = match serde_json::to_string(&x) {
+            Ok(string) => string,
+            Err(_) => "Что-то непонятное пришло".to_string(),
+        };
+        text.push_str("\n\n\n из WooCommerce");
+        state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    }
+    Ok(StatusCode::OK)
+}
 
 pub async fn woo_webhook(
     State(state): State<AppState>,
@@ -57,8 +73,6 @@ pub async fn woo_webhook(
         text.push_str("\n\n\n из WooCommerce");
         state.bot.send_message(state.tokens.my_tg_id, text).await?;
     }
-
-    // state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
 pub async fn create_product(
