@@ -52,7 +52,7 @@ pub async fn woo_product(
         // let x = payload["sku"].clone();
         let mut text = match serde_json::from_value::<ProductFromWoo>(payload) {
             Ok(product) => product.name,
-            Err(_) => "Что-то непонятное пришло".to_string(),
+            Err(e) => e.to_string(),
         };
         text.push_str("\n\n\n из WooCommerce");
         state.bot.send_message(state.tokens.my_tg_id, text).await?;
