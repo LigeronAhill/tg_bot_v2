@@ -1,5 +1,6 @@
 use crate::errors::Result;
 use crate::models::moy_sklad::Audit;
+use crate::models::woocommerce::product::ProductFromWoo;
 use crate::models::{product::Product, AppState};
 use axum::{
     extract::{Path, State},
@@ -48,9 +49,9 @@ pub async fn woo_product(
 ) -> Result<StatusCode> {
     if payload.is_some() {
         let Json(payload) = payload.unwrap();
-        let x = payload["sku"].clone();
-        let mut text: String = match serde_json::to_string(&x) {
-            Ok(string) => string,
+        // let x = payload["sku"].clone();
+        let mut text = match serde_json::from_value::<ProductFromWoo>(payload) {
+            Ok(product) => product.name,
             Err(_) => "Что-то непонятное пришло".to_string(),
         };
         text.push_str("\n\n\n из WooCommerce");

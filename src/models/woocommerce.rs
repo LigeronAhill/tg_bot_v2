@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-
+pub mod product;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Href {
     pub href: String,
