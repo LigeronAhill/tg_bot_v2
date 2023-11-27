@@ -175,5 +175,5 @@ pub struct DefaultAttributesProperties {
 pub struct MetaDataProperties {
     pub id: Option<i64>,
     pub key: Option<String>,
-    pub value: Option<String>,
+    pub value: Option<serde_json::Value>,
 }
