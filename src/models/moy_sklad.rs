@@ -39,7 +39,6 @@ impl Audit {
     pub async fn sync_products_foreign_codes(&self, app_state: AppState) -> Result<String> {
         let mut updated_products = vec![];
         let mut woo_products = vec![];
-        let mut ms_updated_products = vec![];
         let client = reqwest::Client::builder().gzip(true).build()?;
         for event in self.events.clone() {
             let uri = event.meta.href.as_ref().unwrap();
@@ -79,24 +78,20 @@ impl Audit {
                     let mut upd = HashMap::new();
                     upd.insert("externalCode", f_id.as_str());
                     updated_products.push(product.clone());
-                    let ms_updated_product: ProductFromMoySklad = client
+                    let _ms_updated_product = client
                         .put(uri)
                         .bearer_auth(app_state.tokens.ms_token.clone())
                         .json(&upd)
                         .send()
-                        .await?
-                        .json()
                         .await?;
-                    ms_updated_products.push(ms_updated_product);
                 }
             }
         }
 
         let result = format!(
-            "From ms: {}; from woo: {}\nUpdated: {}",
+            "From ms: {}; from woo: {}",
             updated_products.len(),
             woo_products.len(),
-            ms_updated_products.len(),
         );
         Ok(result)
     }
