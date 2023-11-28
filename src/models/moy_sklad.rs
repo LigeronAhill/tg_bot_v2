@@ -85,7 +85,7 @@ impl Audit {
                     result.push_str(&updated_product.external_code);
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_millis(500));
+            let _ = tokio::time::sleep(std::time::Duration::from_millis(500));
         }
         Ok(result)
     }
