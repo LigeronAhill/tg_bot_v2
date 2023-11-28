@@ -18,7 +18,7 @@ pub struct ProductFromMoySklad {
     pub buy_price: Option<Price>,
     /// Код товара
     pub code: Option<String>,
-    pub country: Option<Meta>,
+    pub country: Option<Country>,
     pub description: Option<String>,
     pub discount_prohibited: Option<bool>,
     /// Реальный НДС %
@@ -48,14 +48,14 @@ pub struct ProductFromMoySklad {
     pub product_folder: Option<ProductFolder>,
     pub sale_prices: Option<Vec<SalePrice>>,
     pub shared: bool,
-    pub supplier: Option<Meta>,
+    pub supplier: Option<Supplier>,
     pub sync_id: Option<String>,
     pub tax_system: Option<TaxSystem>,
     /// Серийные номера
     pub things: Option<Vec<String>>,
     pub tnved: Option<String>,
     pub tracking_type: Option<TrackingType>,
-    pub uom: Option<Meta>,
+    pub uom: Option<Uom>,
     pub updated: String,
     pub use_parent_vat: bool,
     pub variants_count: i64,
@@ -66,6 +66,18 @@ pub struct ProductFromMoySklad {
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Owner {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Country {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Supplier {
+    pub meta: Meta,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Uom {
     pub meta: Meta,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
