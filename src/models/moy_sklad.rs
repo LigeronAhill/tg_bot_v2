@@ -53,8 +53,6 @@ impl Audit {
                 && !product.path_name.contains("Сопутствующие товары")
                 && product.article.is_some()
             {
-                // let sku = product.article.unwrap();
-                // let woo_url = format!("https://safira.club/wp-json/wc/v3/products?sku={sku}");
                 let woo_url = "https://safira.club/wp-json/wc/v3/products";
                 let params = [("sku".to_string(), product.article.unwrap())];
                 let products_from_woo: Vec<ProductFromWoo> = client
@@ -83,9 +81,11 @@ impl Audit {
                         .await?
                         .json()
                         .await?;
-                    result = updated_product.external_code;
+                    result.push('\n');
+                    result.push_str(&updated_product.external_code);
                 }
             }
+            tokio::time::sleep(std::time::Duration::from_millis(500));
         }
         Ok(result)
     }
