@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+// use std::collections::HashMap;
 
 use self::product::ProductFromMoySklad;
 use anyhow::Result;
@@ -37,7 +37,8 @@ impl Audit {
         Ok(result.join("\n"))
     }
     pub async fn sync_products_foreign_codes(&self, app_state: AppState) -> Result<String> {
-        let mut result = String::new();
+        let mut updated_products = vec![];
+        let mut woo_products = vec![];
         for event in &self.events {
             let uri = event.meta.href.as_ref().unwrap();
             let client = reqwest::Client::builder().gzip(true).build()?;
@@ -53,8 +54,7 @@ impl Audit {
                 && !product.path_name.contains("Сопутствующие товары")
                 && product.article.is_some()
             {
-                result.push('\n');
-                result.push_str(&product.name);
+                updated_products.push(product.clone());
                 let woo_url = "https://safira.club/wp-json/wc/v3/products";
                 let params = [("sku".to_string(), product.article.unwrap())];
                 let products_from_woo: Vec<ProductFromWoo> = client
@@ -72,22 +72,28 @@ impl Audit {
                     // TODO: create product in woo!!!
                     continue;
                 } else {
-                    let f_id = format!("{}", products_from_woo[0].id);
-                    let mut updated_external_code = HashMap::new();
-                    updated_external_code.insert("externalCode", f_id);
-                    let updated_product: ProductFromMoySklad = client
-                        .put(uri)
-                        .bearer_auth(app_state.tokens.ms_token.clone())
-                        .json(&updated_external_code)
-                        .send()
-                        .await?
-                        .json()
-                        .await?;
-                    result.push('\n');
-                    result.push_str(&updated_product.external_code);
+                    woo_products.push(products_from_woo[0].clone());
+                    // let f_id = format!("{}", products_from_woo[0].id);
+                    // let mut updated_external_code = HashMap::new();
+                    // updated_external_code.insert("externalCode", f_id);
+                    // let updated_product: ProductFromMoySklad = client
+                    //     .put(uri)
+                    //     .bearer_auth(app_state.tokens.ms_token.clone())
+                    //     .json(&updated_external_code)
+                    //     .send()
+                    //     .await?
+                    //     .json()
+                    //     .await?;
+                    // result.push('\n');
+                    // result.push_str(&updated_product.external_code);
                 }
             }
         }
+        let result = format!(
+            "From ms: {}; from woo: {}",
+            updated_products.len(),
+            woo_products.len()
+        );
         Ok(result)
     }
 }
