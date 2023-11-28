@@ -1,3 +1,4 @@
+use mongodb::bson::oid::ObjectId;
 use std::collections::HashMap;
 
 use self::product::ProductFromMoySklad;
@@ -138,6 +139,8 @@ pub struct Meta {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Event {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
     pub meta: Meta,
     pub action: String,
     pub account_id: String,

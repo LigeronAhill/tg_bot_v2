@@ -1,4 +1,5 @@
 use crate::errors::{MyError, Result};
+use crate::models::moy_sklad::Event;
 use crate::models::product::Product;
 use futures::TryStreamExt;
 
@@ -10,15 +11,18 @@ use mongodb::{
 // use serde::{Deserialize, Serialize};
 
 pub const PRODUCT_COL: &str = "product";
+pub const EVENT_COL: &str = "event";
 
 #[derive(Clone, Debug)]
 pub struct Storage {
     product: Collection<Product>,
+    event: Collection<Event>,
 }
 impl Storage {
     pub async fn new(db: &Database) -> Self {
         Self {
             product: db.collection::<Product>(PRODUCT_COL),
+            event: db.collection::<Event>(EVENT_COL),
         }
     }
     pub async fn name_index_create(&self) -> Result<()> {
@@ -101,5 +105,26 @@ impl Storage {
             Ok(_) => Ok(()),
             Err(_) => Err(MyError::DbError),
         }
+    }
+    pub async fn add_events(&self, events: Vec<Event>) -> Result<()> {
+        let _inserted_events = self
+            .event
+            .insert_many(events, None)
+            .await
+            .map_err(|_| MyError::DbError)?;
+        Ok(())
+    }
+    pub async fn get_all_events(&self) -> anyhow::Result<Vec<Event>> {
+        let mut cursor = self.event.find(None, None).await?;
+        let mut result: Vec<Event> = vec![];
+        while let Some(event) = cursor.try_next().await? {
+            result.push(event)
+        }
+        Ok(result)
+    }
+    pub async fn delete_event(&self, event: Event) -> anyhow::Result<()> {
+        let oid = event.id;
+        self.product.delete_one(doc! {"_id": oid}, None).await?;
+        Ok(())
     }
 }

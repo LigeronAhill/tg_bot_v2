@@ -18,40 +18,88 @@ pub async fn health() -> StatusCode {
 //         None => false,
 //     }
 // }
-pub async fn telegram(
-    State(state): State<AppState>,
-    Json(payload): Json<Value>,
-) -> Result<StatusCode> {
-    let mut text: String = match serde_json::to_string_pretty(&payload) {
-        Ok(string) => string,
-        Err(_) => "Что-то непонятное пришло".to_string(),
-    };
-    text.push_str("\n\n\n из телеграм");
-    state.bot.send_message(state.tokens.my_tg_id, text).await?;
-    Ok(StatusCode::OK)
-}
-pub async fn ms_wh_process(
-    State(state): State<AppState>,
-    Json(payload): Json<Audit>,
-) -> Result<StatusCode> {
-    let text = match payload.sync_products_foreign_codes(state.clone()).await {
-        Ok(str) => str,
-        Err(e) => e.to_string(),
-    };
+pub async fn telegram(State(state): State<AppState>, Json(payload): Json<Value>) -> StatusCode {
+    if payload["message"]["text"] == "/sync" {
+        let events = state.storage.get_all_events().await.expect("db error");
+        let client = reqwest::Client::builder().gzip(true).build().unwrap();
+        for event in events {
+            let uri = event.meta.href.as_ref().unwrap();
+            let product = client
+                .get(uri.clone())
+                .bearer_auth(&state.tokens.ms_token.clone())
+                .send()
+                .await
+                .expect("ms reqwest error")
+                .json::<crate::models::moy_sklad::product::ProductFromMoySklad>()
+                .await
+                .expect("parse from ms error");
 
-    state.bot.send_message(state.tokens.my_tg_id, text).await?;
-    Ok(StatusCode::OK)
+            if !product.path_name.contains("Не для интернета")
+                && !product.path_name.contains("Услуги")
+                && !product.path_name.contains("Сопутствующие товары")
+                && product.article.is_some()
+            {
+                let woo_url = "https://safira.club/wp-json/wc/v3/products";
+                let params = [("sku".to_string(), product.article.clone().unwrap())];
+                let products_from_woo: Vec<ProductFromWoo> = client
+                    .get(woo_url)
+                    .query(&params)
+                    .basic_auth(
+                        state.tokens.woo_token_1.clone(),
+                        Some(state.tokens.woo_token_2.clone()),
+                    )
+                    .send()
+                    .await
+                    .expect("woo reqwest error")
+                    .json()
+                    .await
+                    .expect("parse from woo error");
+                if products_from_woo.is_empty() {
+                    // TODO: create product in woo!!!
+                    continue;
+                } else {
+                    let f_id = format!("{}", products_from_woo[0].id);
+                    let mut upd = std::collections::HashMap::new();
+                    upd.insert("externalCode", f_id);
+                    match client
+                        .put(uri)
+                        .bearer_auth(state.tokens.ms_token.clone())
+                        .json(&upd)
+                        .send()
+                        .await
+                    {
+                        Ok(_) => state
+                            .storage
+                            .delete_event(event)
+                            .await
+                            .expect("delete from db error"),
+                        Err(_) => continue,
+                    }
+                }
+            }
+        }
+    } else {
+        let mut text: String = match serde_json::to_string_pretty(&payload) {
+            Ok(string) => string,
+            Err(_) => "Что-то непонятное пришло".to_string(),
+        };
+        text.push_str("\n\n\n из телеграм");
+        state
+            .bot
+            .send_message(state.tokens.my_tg_id, text)
+            .await
+            .expect("error sending tg message");
+    }
+    StatusCode::OK
 }
+
 pub async fn ms_webhook(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<Audit>,
 ) -> Result<StatusCode> {
-    let client = reqwest::Client::builder().gzip(true).build().unwrap();
-    let _ = client
-        .post("https://friday.shuttleapp.rs/api/v1/mswebhookprocess")
-        .json(&payload)
-        .send()
-        .await;
+    state.storage.add_events(payload.events.clone()).await?;
+    let text = format!("Received {} updates", payload.events.len());
+    state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
 pub async fn woo_product(
