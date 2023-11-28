@@ -53,15 +53,17 @@ impl Audit {
                 && !product.path_name.contains("Сопутствующие товары")
                 && product.article.is_some()
             {
+                // let sku = product.article.unwrap();
+                // let woo_url = format!("https://safira.club/wp-json/wc/v3/products?sku={sku}");
                 let woo_url = "https://safira.club/wp-json/wc/v3/products";
                 let params = [("sku".to_string(), product.article.unwrap())];
                 let products_from_woo: Vec<ProductFromWoo> = client
                     .get(woo_url)
+                    .query(&params)
                     .basic_auth(
                         app_state.tokens.woo_token_1.clone(),
                         Some(app_state.tokens.woo_token_2.clone()),
                     )
-                    .form(&params)
                     .send()
                     .await?
                     .json()
