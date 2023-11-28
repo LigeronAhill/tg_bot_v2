@@ -53,6 +53,8 @@ impl Audit {
                 && !product.path_name.contains("Сопутствующие товары")
                 && product.article.is_some()
             {
+                result.push('\n');
+                result.push_str(&product.name);
                 let woo_url = "https://safira.club/wp-json/wc/v3/products";
                 let params = [("sku".to_string(), product.article.unwrap())];
                 let products_from_woo: Vec<ProductFromWoo> = client
@@ -85,7 +87,6 @@ impl Audit {
                     result.push_str(&updated_product.external_code);
                 }
             }
-            let _ = tokio::time::sleep(std::time::Duration::from_millis(500));
         }
         Ok(result)
     }
