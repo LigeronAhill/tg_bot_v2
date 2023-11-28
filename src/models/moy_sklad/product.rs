@@ -26,7 +26,7 @@ pub struct ProductFromMoySklad {
     pub external_code: String,
     pub files: Option<Files>,
     /// Метаданные отдела сотрудника
-    pub group: Group,
+    pub group: Option<Group>,
     pub id: String,
     pub images: Option<Images>,
     pub is_serial_trackable: Option<bool>,
