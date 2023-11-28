@@ -87,13 +87,13 @@ impl Audit {
             .await?
             .json()
             .await?;
-        let result = format!(
+        let _result = format!(
             "From ms: {}; from woo: {}\nUpdated: {}",
             updated_products.len(),
             woo_products.len(),
             ms_updated_products.len(),
         );
-        Ok(result)
+        Ok(serde_json::to_string_pretty(&ms_updated_products)?)
     }
 }
 
