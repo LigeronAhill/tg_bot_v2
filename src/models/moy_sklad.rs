@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use self::product::ProductFromMoySklad;
 use anyhow::Result;
 use serde::Deserialize;
@@ -37,11 +39,12 @@ impl Audit {
     pub async fn sync_products_foreign_codes(&self, app_state: AppState) -> Result<String> {
         let mut updated_products = vec![];
         let mut woo_products = vec![];
+        let mut ms_updated_products = vec![];
         let client = reqwest::Client::builder().gzip(true).build()?;
         for event in self.events.clone() {
             let uri = event.meta.href.as_ref().unwrap();
 
-            let mut product = client
+            let product = client
                 .get(uri.clone())
                 .bearer_auth(&app_state.tokens.ms_token.clone())
                 .send()
@@ -73,20 +76,22 @@ impl Audit {
                 } else {
                     woo_products.push(products_from_woo[0].clone());
                     let f_id = format!("{}", products_from_woo[0].id);
-                    product.external_code = f_id;
+                    let mut upd = HashMap::new();
+                    upd.insert("externalCode", f_id.as_str());
                     updated_products.push(product.clone());
+                    let ms_updated_product: ProductFromMoySklad = client
+                        .put(uri)
+                        .bearer_auth(app_state.tokens.ms_token.clone())
+                        .json(&upd)
+                        .send()
+                        .await?
+                        .json()
+                        .await?;
+                    ms_updated_products.push(ms_updated_product);
                 }
             }
         }
-        let upd_uri = "https://api.moysklad.ru/api/remap/1.2/entity/product";
-        let ms_updated_products: Vec<ProductFromMoySklad> = client
-            .post(upd_uri)
-            .bearer_auth(app_state.tokens.ms_token.clone())
-            .json(&updated_products)
-            .send()
-            .await?
-            .json()
-            .await?;
+
         let result = format!(
             "From ms: {}; from woo: {}\nUpdated: {}",
             updated_products.len(),
