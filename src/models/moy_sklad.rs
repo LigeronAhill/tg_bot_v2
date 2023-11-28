@@ -39,11 +39,13 @@ impl Audit {
     pub async fn sync_products_foreign_codes(&self, app_state: AppState) -> Result<String> {
         let mut updated_products = vec![];
         let mut woo_products = vec![];
+        let mut resp_products = vec![];
         let client = reqwest::Client::builder().gzip(true).build()?;
         for event in self.events.clone() {
             let uri = event.meta.href.as_ref().unwrap();
 
             let product = client
+                .clone()
                 .get(uri.clone())
                 .bearer_auth(&app_state.tokens.ms_token.clone())
                 .send()
@@ -56,9 +58,11 @@ impl Audit {
                 && !product.path_name.contains("Сопутствующие товары")
                 && product.article.is_some()
             {
+                updated_products.push(product.clone());
                 let woo_url = "https://safira.club/wp-json/wc/v3/products";
                 let params = [("sku".to_string(), product.article.clone().unwrap())];
                 let products_from_woo: Vec<ProductFromWoo> = client
+                    .clone()
                     .get(woo_url)
                     .query(&params)
                     .basic_auth(
@@ -77,21 +81,26 @@ impl Audit {
                     let f_id = format!("{}", products_from_woo[0].id);
                     let mut upd = HashMap::new();
                     upd.insert("externalCode", f_id.as_str());
-                    updated_products.push(product.clone());
-                    let _ms_updated_product = client
+
+                    let ms_updated_product = client
+                        .clone()
                         .put(uri)
                         .bearer_auth(app_state.tokens.ms_token.clone())
                         .json(&upd)
                         .send()
+                        .await?
+                        .json::<ProductFromMoySklad>()
                         .await?;
+                    resp_products.push(ms_updated_product);
                 }
             }
         }
 
         let result = format!(
-            "From ms: {}; from woo: {}",
+            "From ms: {}; from woo: {}\n{}",
             updated_products.len(),
             woo_products.len(),
+            resp_products.len(),
         );
         Ok(result)
     }
