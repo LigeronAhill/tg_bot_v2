@@ -3,6 +3,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::Meta;
+#[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductFromMoySklad {
@@ -83,6 +84,7 @@ pub struct Group {
 pub struct ProductFolder {
     pub meta: Meta,
 }
+#[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Alcoholic {
@@ -103,6 +105,7 @@ pub struct Attribute {
     pub value: Value,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BarCode {
     pub ean13: Option<String>,
@@ -116,6 +119,7 @@ pub struct Price {
     pub currency: Meta,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Pack {
     pub barcodes: Option<Vec<BarCode>>,
