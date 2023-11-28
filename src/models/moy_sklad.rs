@@ -44,7 +44,7 @@ impl Audit {
         for event in self.events.clone() {
             let uri = event.meta.href.as_ref().unwrap();
 
-            let product = client
+            let mut product = client
                 .clone()
                 .get(uri.clone())
                 .bearer_auth(&app_state.tokens.ms_token.clone())
@@ -58,7 +58,6 @@ impl Audit {
                 && !product.path_name.contains("Сопутствующие товары")
                 && product.article.is_some()
             {
-                updated_products.push(product.clone());
                 let woo_url = "https://safira.club/wp-json/wc/v3/products";
                 let params = [("sku".to_string(), product.article.clone().unwrap())];
                 let products_from_woo: Vec<ProductFromWoo> = client
@@ -79,25 +78,45 @@ impl Audit {
                 } else {
                     woo_products.push(products_from_woo[0].clone());
                     let f_id = format!("{}", products_from_woo[0].id);
-                    let mut upd = HashMap::new();
-                    upd.insert("externalCode", f_id.as_str());
+                    product.external_code = f_id.clone();
+                    updated_products.push(product.clone());
+                    // let mut upd = HashMap::new();
+                    // upd.insert("externalCode", f_id.as_str());
 
-                    let ms_updated_product = client
-                        .clone()
-                        .put(uri)
-                        .bearer_auth(app_state.tokens.ms_token.clone())
-                        .json(&upd)
-                        .send()
-                        .await?
-                        .json::<ProductFromMoySklad>()
-                        .await?;
-                    resp_products.push(ms_updated_product);
+                    // let ms_updated_product = client
+                    //     .clone()
+                    //     .put(uri)
+                    //     .bearer_auth(app_state.tokens.ms_token.clone())
+                    //     .json(&upd)
+                    //     .send()
+                    //     .await?
+                    //     .json::<ProductFromMoySklad>()
+                    //     .await?;
+                    // resp_products.push(ms_updated_product);
                 }
             }
         }
 
+        for product in updated_products.clone() {
+            let url = format!(
+                "https://api.moysklad.ru/api/remap/1.2/entity/product/{}",
+                product.id
+            );
+            let mut upd = HashMap::new();
+            upd.insert("externalCode", product.external_code);
+            let ms_updated_product = client
+                .clone()
+                .put(url)
+                .bearer_auth(app_state.tokens.ms_token.clone())
+                .json(&upd)
+                .send()
+                .await?
+                .json::<ProductFromMoySklad>()
+                .await?;
+            resp_products.push(ms_updated_product);
+        }
         let result = format!(
-            "From ms: {}; from woo: {}\n{}",
+            "From ms: {}; from woo: {}\nresponse: {}",
             updated_products.len(),
             woo_products.len(),
             resp_products.len(),
