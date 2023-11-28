@@ -79,7 +79,7 @@ impl Audit {
             }
         }
         let upd_uri = "https://api.moysklad.ru/api/remap/1.2/entity/product";
-        let ms_updated_products: Vec<ProductFromMoySklad> = client
+        let ms_updated_products: Vec<serde_json::Value> = client
             .post(upd_uri)
             .bearer_auth(app_state.tokens.ms_token.clone())
             .json(&updated_products)
