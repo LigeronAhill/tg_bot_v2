@@ -79,7 +79,7 @@ impl Audit {
             }
         }
         let upd_uri = "https://api.moysklad.ru/api/remap/1.2/entity/product";
-        let ms_updated_products: Vec<serde_json::Value> = client
+        let ms_updated_products: Vec<ProductFromMoySklad> = client
             .post(upd_uri)
             .bearer_auth(app_state.tokens.ms_token.clone())
             .json(&updated_products)
@@ -87,13 +87,13 @@ impl Audit {
             .await?
             .json()
             .await?;
-        let _result = format!(
+        let result = format!(
             "From ms: {}; from woo: {}\nUpdated: {}",
             updated_products.len(),
             woo_products.len(),
             ms_updated_products.len(),
         );
-        Ok(serde_json::to_string_pretty(&ms_updated_products)?)
+        Ok(result)
     }
 }
 
