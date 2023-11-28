@@ -8,9 +8,9 @@ use super::Meta;
 #[serde(rename_all = "camelCase")]
 pub struct ProductFromMoySklad {
     /// ID учетной записи
-    pub account_id: String,
+    pub account_id: Option<String>,
     pub alcoholic: Option<Alcoholic>,
-    pub archived: bool,
+    pub archived: Option<bool>,
     pub article: Option<String>,
     pub attributes: Option<Vec<Attribute>>,
     pub barcodes: Option<Vec<BarCode>>,
@@ -20,7 +20,7 @@ pub struct ProductFromMoySklad {
     pub code: Option<String>,
     pub country: Option<Meta>,
     pub description: Option<String>,
-    pub discount_prohibited: bool,
+    pub discount_prohibited: Option<bool>,
     /// Реальный НДС %
     pub effective_vat: Option<i64>,
     pub effective_vat_enabled: Option<bool>,
