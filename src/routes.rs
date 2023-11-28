@@ -35,7 +35,8 @@ pub async fn ms_webhook(
     State(state): State<AppState>,
     Json(payload): Json<Audit>,
 ) -> Result<StatusCode> {
-    let text = match payload.test_get_product(state.clone()).await {
+    // let text = match payload.test_get_product(state.clone()).await {
+    let text = match payload.sync_products_foreign_codes(state.clone()).await {
         Ok(str) => str,
         Err(e) => e.to_string(),
     };

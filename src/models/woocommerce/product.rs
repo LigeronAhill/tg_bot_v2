@@ -40,7 +40,7 @@ pub struct ProductFromWoo {
     pub tax_status: Option<TaxStatus>,
     pub tax_class: Option<String>,
     pub manage_stock: Option<bool>,
-    pub stock_quantity: Option<i64>,
+    pub stock_quantity: Option<f64>,
     pub stock_status: Option<StockStatus>,
     pub backorders: Option<BackOrder>,
     pub backorder_allowed: Option<bool>,
