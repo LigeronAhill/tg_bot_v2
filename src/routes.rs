@@ -30,18 +30,28 @@ pub async fn telegram(
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
     Ok(StatusCode::OK)
 }
-
-pub async fn ms_webhook(
+pub async fn ms_wh_process(
     State(state): State<AppState>,
     Json(payload): Json<Audit>,
 ) -> Result<StatusCode> {
-    // let text = match payload.test_get_product(state.clone()).await {
     let text = match payload.sync_products_foreign_codes(state.clone()).await {
         Ok(str) => str,
         Err(e) => e.to_string(),
     };
 
     state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    Ok(StatusCode::OK)
+}
+pub async fn ms_webhook(
+    State(_state): State<AppState>,
+    Json(payload): Json<Audit>,
+) -> Result<StatusCode> {
+    let client = reqwest::Client::builder().gzip(true).build().unwrap();
+    let _ = client
+        .post("https://friday.shuttleapp.rs/api/v1/mswebhookprocess")
+        .json(&payload)
+        .send()
+        .await;
     Ok(StatusCode::OK)
 }
 pub async fn woo_product(
