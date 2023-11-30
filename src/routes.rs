@@ -18,14 +18,14 @@ pub async fn telegram(
     Json(payload): Json<Value>,
 ) -> Result<StatusCode> {
     if payload["message"]["text"] == "/sync" {
-        match telegram::sync_categories(state.clone()).await {
-            Ok(_) => Ok(StatusCode::OK),
-            Err(e) => {
-                let text = e.to_string();
-                state.bot.send_message(state.tokens.my_tg_id, text).await?;
-                Ok(StatusCode::OK)
-            }
-        }
+        let text = match telegram::sync_categories(state.clone()).await {
+            Ok(t) => t,
+            Err(e) => e.to_string(),
+        };
+
+        state.bot.send_message(state.tokens.my_tg_id, text).await?;
+        Ok(StatusCode::OK)
+
         // telegram::sync_events(state)
         //     .await
         //     .map_err(|_| MyError::DbError)?

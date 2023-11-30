@@ -1,7 +1,8 @@
 use crate::models::{
     moy_sklad::product::ProductFromMoySklad, woocommerce::product::ProductFromWoo, AppState,
 };
-pub async fn sync_categories(state: AppState) -> anyhow::Result<()> {
+pub async fn sync_categories(state: AppState) -> anyhow::Result<String> {
+    let mut count = 0;
     let client = reqwest::Client::builder().gzip(true).build()?;
     let uri = "https://api.moysklad.ru/api/remap/1.2/entity/productfolder";
     let woo_uri = "https://safira.club/wp-json/wc/v3/";
@@ -34,6 +35,7 @@ pub async fn sync_categories(state: AppState) -> anyhow::Result<()> {
             );
             let _ = state.bot.send_message(state.tokens.my_tg_id, text).await;
         } else {
+            count += 1;
             let update = [(
                 "externalCode",
                 categories_from_woo[0]["id"].as_str().unwrap(),
@@ -47,7 +49,7 @@ pub async fn sync_categories(state: AppState) -> anyhow::Result<()> {
                 .await?;
         }
     }
-    Ok(())
+    Ok(format!("Updated {count} categories"))
 }
 
 pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
