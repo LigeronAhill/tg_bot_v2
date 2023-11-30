@@ -23,9 +23,11 @@ pub async fn sync_categories(state: AppState) -> anyhow::Result<()> {
             )
             .send()
             .await?
-            .json::<Vec<serde_json::Value>>()
+            .json::<serde_json::Value>()
             .await?;
-        if categories_from_woo.len() > 1 && categories_from_woo.is_empty() {
+        if categories_from_woo.as_array().unwrap().len() > 1
+            && categories_from_woo.as_array().unwrap().is_empty()
+        {
             let text = format!(
                 "Category {} failed sync",
                 category["name"].as_str().unwrap()
