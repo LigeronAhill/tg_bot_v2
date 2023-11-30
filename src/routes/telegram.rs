@@ -149,6 +149,50 @@ pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
                         .json(&cat_upd)
                         .send()
                         .await?;
+                    if product.variants_count != 0 {
+                        let vars_url = format!("https://api.moysklad.ru/api/remap/1.2/entity/variant?filter=productid={}", product.id);
+                        let woo_vars_url = format!(
+                            "https://safira.club/wp-json/wc/v3/products/{}/variations",
+                            products_from_woo[0].clone().id
+                        );
+                        let variations: Vec<serde_json::Value> = client
+                            .get(vars_url)
+                            .bearer_auth(state.tokens.ms_token.clone())
+                            .send()
+                            .await?
+                            .json()
+                            .await?;
+                        let variations_from_woo: Vec<serde_json::Value> = client
+                            .get(woo_vars_url)
+                            .basic_auth(
+                                state.tokens.woo_token_1.clone(),
+                                Some(state.tokens.woo_token_2.clone()),
+                            )
+                            .send()
+                            .await?
+                            .json()
+                            .await?;
+                        for variation in variations {
+                            for variation_from_woo in variations_from_woo.clone() {
+                                let mut var_upd = std::collections::HashMap::new();
+                                var_upd.insert(
+                                    "externalCode",
+                                    variation_from_woo["id"].as_i64().unwrap(),
+                                );
+                                let url = variation["meta"]["href"].as_str().unwrap();
+                                if variation["characteristics"][0]["value"]
+                                    == variation_from_woo["attributes"][0]["option"]
+                                {
+                                    client
+                                        .put(url)
+                                        .bearer_auth(state.tokens.ms_token.clone())
+                                        .json(&var_upd)
+                                        .send()
+                                        .await?;
+                                }
+                            }
+                        }
+                    }
                     let mut upd = std::collections::HashMap::new();
                     upd.insert("externalCode", f_id);
                     match client
