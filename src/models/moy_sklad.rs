@@ -24,7 +24,7 @@ pub struct AuditContext {
 pub struct Meta {
     #[serde(rename = "type")]
     pub type_field: Option<String>,
-    pub href: String,
+    pub href: Option<String>,
     pub metadata_href: Option<String>,
     pub media_type: Option<String>,
     pub uuid_href: Option<String>,
