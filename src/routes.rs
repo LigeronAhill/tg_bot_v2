@@ -76,7 +76,8 @@ pub async fn create_product(
 }
 
 pub async fn get_products(State(app_state): State<AppState>) -> Result<Json<Vec<Product>>> {
-    let result = app_state.storage.find_all_products().await?;
+    let result = app_state.storage.get_all_events().await?;
+    // let result = app_state.storage.find_all_products().await?;
     Ok(Json(result))
 }
 pub async fn get_product_by_id(
