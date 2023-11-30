@@ -81,6 +81,8 @@ pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
                                                 _ => continue,
                                             }
                                         }
+                                    } else {
+                                        continue;
                                     }
                                 }
                                 _ => {
@@ -110,6 +112,8 @@ pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
                     }
                 }
             }
+        } else {
+            continue;
         }
     }
     Ok(())
