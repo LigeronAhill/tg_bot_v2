@@ -20,7 +20,7 @@ pub async fn telegram(
     if payload["message"]["text"] == "/sync" {
         telegram::sync_events(state)
             .await
-            .map_err(|_| crate::errors::MyError::DbError)?;
+            .map_err(|e| crate::errors::MyError::Static(e.to_string()))?;
         Ok(StatusCode::OK)
     } else {
         let mut text: String = match serde_json::to_string_pretty(&payload) {
