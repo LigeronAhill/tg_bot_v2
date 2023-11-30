@@ -124,7 +124,7 @@ impl Storage {
     }
     pub async fn delete_event(&self, event: Event) -> anyhow::Result<()> {
         let oid = event.id;
-        self.product.delete_one(doc! {"_id": oid}, None).await?;
+        self.event.delete_one(doc! {"_id": oid}, None).await?;
         Ok(())
     }
 }
