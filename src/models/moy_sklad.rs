@@ -1,116 +1,14 @@
 use mongodb::bson::oid::ObjectId;
-use std::collections::HashMap;
 
-use self::product::ProductFromMoySklad;
-use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use super::woocommerce::product::ProductFromWoo;
-use super::AppState;
 pub mod product;
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Audit {
     pub audit_context: AuditContext,
     pub events: Vec<Event>,
-}
-
-impl Audit {
-    pub async fn test_get_product(&self, app_state: AppState) -> Result<String> {
-        let mut result: Vec<String> = vec![];
-        for event in &self.events {
-            let uri = event.meta.href.as_ref().unwrap();
-            let client = reqwest::Client::builder().gzip(true).build()?;
-            let response = client
-                .get(uri)
-                .bearer_auth(&app_state.tokens.ms_token)
-                .send()
-                .await?;
-            let product = response.json::<ProductFromMoySklad>().await?;
-            if !product.path_name.contains("Не для интернета")
-                && !product.path_name.contains("Услуги")
-                && !product.path_name.contains("Сопутствующие товары")
-            {
-                result.push(product.name)
-            }
-        }
-        Ok(result.join("\n"))
-    }
-    pub async fn sync_products_foreign_codes(&self, app_state: AppState) -> Result<String> {
-        let mut updated_products = vec![];
-        let mut woo_products = vec![];
-        let mut resp_products = vec![];
-        let client = reqwest::Client::builder()
-            .gzip(true)
-            .tcp_keepalive(std::time::Duration::from_secs(30))
-            .build()?;
-        for event in self.events.clone() {
-            let uri = event.meta.href.as_ref().unwrap();
-
-            let mut product = client
-                .get(uri.clone())
-                .bearer_auth(&app_state.tokens.ms_token.clone())
-                .send()
-                .await?
-                .json::<ProductFromMoySklad>()
-                .await?;
-
-            if !product.path_name.contains("Не для интернета")
-                && !product.path_name.contains("Услуги")
-                && !product.path_name.contains("Сопутствующие товары")
-                && product.article.is_some()
-            {
-                let woo_url = "https://safira.club/wp-json/wc/v3/products";
-                let params = [("sku".to_string(), product.article.clone().unwrap())];
-                let products_from_woo: Vec<ProductFromWoo> = client
-                    .get(woo_url)
-                    .query(&params)
-                    .basic_auth(
-                        app_state.tokens.woo_token_1.clone(),
-                        Some(app_state.tokens.woo_token_2.clone()),
-                    )
-                    .send()
-                    .await?
-                    .json()
-                    .await?;
-                if products_from_woo.is_empty() {
-                    // TODO: create product in woo!!!
-                    continue;
-                } else {
-                    woo_products.push(products_from_woo[0].clone());
-                    let f_id = format!("{}", products_from_woo[0].id);
-                    product.external_code = f_id.clone();
-                    updated_products.push(product.clone());
-                }
-            }
-        }
-
-        for product in updated_products.clone() {
-            let url = format!(
-                "https://api.moysklad.ru/api/remap/1.2/entity/product/{}",
-                product.id
-            );
-            let mut upd = HashMap::new();
-            upd.insert("externalCode", product.external_code);
-            let ms_updated_product = client
-                .put(url)
-                .bearer_auth(app_state.tokens.ms_token.clone())
-                .json(&upd)
-                .send()
-                .await?
-                .json::<ProductFromMoySklad>()
-                .await?;
-            resp_products.push(ms_updated_product);
-        }
-        let result = format!(
-            "From ms: {}; from woo: {}\nresponse: {}",
-            updated_products.len(),
-            woo_products.len(),
-            resp_products.len(),
-        );
-        Ok(result)
-    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -126,7 +24,7 @@ pub struct AuditContext {
 pub struct Meta {
     #[serde(rename = "type")]
     pub type_field: Option<String>,
-    pub href: Option<String>,
+    pub href: String,
     pub metadata_href: Option<String>,
     pub media_type: Option<String>,
     pub uuid_href: Option<String>,
@@ -142,6 +40,13 @@ pub struct Event {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub meta: Meta,
-    pub action: String,
+    pub action: Action,
     pub account_id: String,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Action {
+    CREATE,
+    #[default]
+    UPDATE,
+    DELETE,
 }

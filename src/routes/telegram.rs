@@ -1,233 +1,104 @@
 use crate::models::{
-    moy_sklad::product::ProductFromMoySklad, woocommerce::product::ProductFromWoo, AppState,
+    moy_sklad::{product::ProductFromMoySklad, Action},
+    woocommerce::product::ProductFromWoo,
+    AppState,
 };
-pub async fn sync_categories(state: AppState) -> anyhow::Result<String> {
-    let mut count = 0;
-    let client = reqwest::Client::builder().gzip(true).build()?;
-    let uri = "https://api.moysklad.ru/api/remap/1.2/entity/productfolder";
-    let woo_uri = "https://safira.club/wp-json/wc/v3/";
-    let categories = client
-        .get(uri)
-        .bearer_auth(&state.tokens.ms_token.clone())
-        .send()
-        .await?
-        .json::<serde_json::Value>()
-        .await?;
-    for category in categories["rows"].as_array().unwrap() {
-        let query = [("search", category["name"].as_str().unwrap())];
-        let categories_from_woo = client
-            .get(woo_uri)
-            .query(&query)
-            .basic_auth(
-                state.tokens.woo_token_1.clone(),
-                Some(state.tokens.woo_token_2.clone()),
-            )
-            .send()
-            .await?
-            .json::<serde_json::Value>()
-            .await?;
-        if categories_from_woo.as_array().unwrap().len() > 1
-            || categories_from_woo.as_array().unwrap().is_empty()
-        {
-            let text = format!(
-                "Category {} failed sync",
-                category["name"].as_str().unwrap()
-            );
-            let _ = state.bot.send_message(state.tokens.my_tg_id, text).await;
-        } else {
-            count += 1;
-            let update = [(
-                "externalCode",
-                categories_from_woo[0]["id"].as_str().unwrap(),
-            )];
-            let category_url = category["meta"]["href"].as_str().unwrap();
-            client
-                .put(category_url)
-                .bearer_auth(&state.tokens.ms_token.clone())
-                .json(&update)
-                .send()
-                .await?;
-        }
-    }
-    Ok(format!("Updated {count} categories"))
-}
-
 pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
     let events = state.storage.get_all_events().await?;
     let client = reqwest::Client::builder().gzip(true).build()?;
     for event in events {
-        let uri = event.meta.href.as_ref().unwrap();
         let product = client
-            .get(uri.clone())
-            .bearer_auth(&state.tokens.ms_token.clone())
+            .get(&event.meta.href)
+            .bearer_auth(&state.tokens.ms_token)
             .send()
             .await?
             .json::<ProductFromMoySklad>()
             .await?;
-
-        if (!product.path_name.contains("Не для интернета")
-            || !product.path_name.contains("Услуги")
-            || !product.path_name.contains("Сопутствующие товары"))
-            && product.article.is_some()
+        if product.path_name.contains("Не для интернета")
+            || product.path_name.contains("Услуги")
+            || product.path_name.contains("Сопутствующие товары")
         {
-            match event.action.as_str() {
-                "CREATE" => {
+            state.storage.delete_event(event).await?
+        } else {
+            match event.action {
+                Action::CREATE => todo!(),
+                Action::UPDATE => {
+                    let Some(sku) = product.article else {
+                        return Err(anyhow::Error::msg("NO SKU!"));
+                    };
                     let woo_url = "https://safira.club/wp-json/wc/v3/products";
-                    let params = [("sku".to_string(), product.article.clone().unwrap())];
-                    let products_from_woo: Vec<ProductFromWoo> = client
-                        .get(woo_url)
-                        .query(&params)
-                        .basic_auth(
-                            state.tokens.woo_token_1.clone(),
-                            Some(state.tokens.woo_token_2.clone()),
-                        )
+                    let product_url = format!("{woo_url}/{}", product.external_code);
+                    let woo_response = client
+                        .get(product_url)
+                        .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
                         .send()
-                        .await?
-                        .json()
                         .await?;
-                    if products_from_woo.is_empty() {
+                    if woo_response.status() == axum::http::StatusCode::OK {
                         todo!()
                     } else {
-                        let f_id = format!("{}", products_from_woo[0].id);
-                        let category_id = format!(
-                            "{}",
-                            products_from_woo[0].clone().categories.unwrap()[0]
-                                .id
-                                .unwrap()
-                        );
-                        let cat_url = product.product_folder.unwrap().meta.href.unwrap();
-                        let mut cat_upd = std::collections::HashMap::new();
-                        cat_upd.insert("externalCode", category_id);
-                        client
-                            .put(cat_url)
-                            .bearer_auth(state.tokens.ms_token.clone())
-                            .json(&cat_upd)
+                        let params = [("sku".to_string(), sku)];
+                        let woo_response = client
+                            .get(woo_url)
+                            .query(&params)
+                            .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
                             .send()
+                            .await?
+                            .json::<Vec<ProductFromWoo>>()
                             .await?;
-                        let mut upd = std::collections::HashMap::new();
-                        upd.insert("externalCode", f_id);
-                        match client
-                            .put(uri)
-                            .bearer_auth(state.tokens.ms_token.clone())
-                            .json(&upd)
-                            .send()
-                            .await
-                        {
-                            Ok(_) => state.storage.delete_event(event).await?,
-                            Err(_) => continue,
+                        match woo_response.len() {
+                            1 => {
+                                let product_from_woo = woo_response[0].clone();
+                                let cat_url = &product.product_folder.unwrap().meta.href;
+                                let cat_id = &product_from_woo.categories.unwrap()[0].id.unwrap();
+                                let mut cat_upd = std::collections::HashMap::new();
+                                cat_upd.insert("externalCode", &cat_id);
+                                client
+                                    .put(cat_url)
+                                    .bearer_auth(&state.tokens.ms_token)
+                                    .json(&cat_upd)
+                                    .send()
+                                    .await?;
+                                let mut upd = std::collections::HashMap::new();
+                                upd.insert("externalCode", &product_from_woo.id);
+                                let response = client
+                                    .put(&product.meta.href)
+                                    .bearer_auth(&state.tokens.ms_token)
+                                    .json(&upd)
+                                    .send()
+                                    .await?;
+                                match response.status() {
+                                    axum::http::StatusCode::OK => {
+                                        state.storage.delete_event(event).await?
+                                    }
+                                    _ => continue,
+                                }
+                            }
+                            _ => {
+                                let error = format!("Can't find product {}", product.name);
+                                return Err(anyhow::Error::msg(error));
+                            }
                         }
                     }
                 }
-                "UPDATE" => {
-                    let woo_url = "https://safira.club/wp-json/wc/v3/products";
-                    let params = [("sku".to_string(), product.article.clone().unwrap())];
-                    let products_from_woo: Vec<ProductFromWoo> = client
-                        .get(woo_url)
-                        .query(&params)
-                        .basic_auth(
-                            state.tokens.woo_token_1.clone(),
-                            Some(state.tokens.woo_token_2.clone()),
-                        )
-                        .send()
-                        .await?
-                        .json()
-                        .await?;
-
-                    let f_id = format!("{}", products_from_woo[0].id);
-                    let category_id = format!(
-                        "{}",
-                        products_from_woo[0].clone().categories.unwrap()[0]
-                            .id
-                            .unwrap()
-                    );
-                    let cat_url = product.product_folder.unwrap().meta.href.unwrap();
-                    let mut cat_upd = std::collections::HashMap::new();
-                    cat_upd.insert("externalCode", category_id);
-                    client
-                        .put(cat_url)
-                        .bearer_auth(state.tokens.ms_token.clone())
-                        .json(&cat_upd)
-                        .send()
-                        .await?;
-                    // if product.variants_count != 0 {
-                    //     let vars_url = format!("https://api.moysklad.ru/api/remap/1.2/entity/variant?filter=productid={}", product.id);
-                    //     let woo_vars_url = format!(
-                    //         "https://safira.club/wp-json/wc/v3/products/{}/variations",
-                    //         products_from_woo[0].clone().id
-                    //     );
-                    //     let variations: Vec<serde_json::Value> = client
-                    //         .get(vars_url)
-                    //         .bearer_auth(state.tokens.ms_token.clone())
-                    //         .send()
-                    //         .await?
-                    //         .json()
-                    //         .await?;
-                    //     let variations_from_woo: Vec<serde_json::Value> = client
-                    //         .get(woo_vars_url)
-                    //         .basic_auth(
-                    //             state.tokens.woo_token_1.clone(),
-                    //             Some(state.tokens.woo_token_2.clone()),
-                    //         )
-                    //         .send()
-                    //         .await?
-                    //         .json()
-                    //         .await?;
-                    //     for variation in variations {
-                    //         for variation_from_woo in variations_from_woo.clone() {
-                    //             let mut var_upd = std::collections::HashMap::new();
-                    //             var_upd.insert(
-                    //                 "externalCode",
-                    //                 variation_from_woo["id"].as_i64().unwrap(),
-                    //             );
-                    //             let url = variation["meta"]["href"].as_str().unwrap();
-                    //             if variation["characteristics"][0]["value"]
-                    //                 == variation_from_woo["attributes"][0]["option"]
-                    //             {
-                    //                 client
-                    //                     .put(url)
-                    //                     .bearer_auth(state.tokens.ms_token.clone())
-                    //                     .json(&var_upd)
-                    //                     .send()
-                    //                     .await?;
-                    //             }
-                    //         }
-                    //     }
-                    // }
-                    let mut upd = std::collections::HashMap::new();
-                    upd.insert("externalCode", f_id);
-                    match client
-                        .put(uri)
-                        .bearer_auth(state.tokens.ms_token.clone())
-                        .json(&upd)
-                        .send()
-                        .await
-                    {
-                        Ok(_) => state.storage.delete_event(event).await?,
-                        Err(_) => continue,
-                    }
-                }
-                "DELETE" => {
+                Action::DELETE => {
                     let woo_url = format!(
                         "https://safira.club/wp-json/wc/v3/products/{}",
                         product.external_code
                     );
-                    match client
+                    let response = client
                         .delete(woo_url)
                         .basic_auth(
                             state.tokens.woo_token_1.clone(),
                             Some(state.tokens.woo_token_2.clone()),
                         )
                         .send()
-                        .await
-                    {
-                        Ok(_) => state.storage.delete_event(event).await?,
-                        Err(_) => continue,
+                        .await?;
+                    match response.status() {
+                        axum::http::StatusCode::OK => state.storage.delete_event(event).await?,
+                        _ => continue,
                     }
                 }
-                _ => continue,
             }
-        } else {
-            state.storage.delete_event(event).await?;
         }
     }
     Ok(())
