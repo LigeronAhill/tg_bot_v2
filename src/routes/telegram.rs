@@ -3,6 +3,13 @@ use crate::models::{
     woocommerce::product::ProductFromWoo,
     AppState,
 };
+pub async fn clear_events(state: AppState) -> anyhow::Result<()> {
+    let events = state.storage.get_all_events().await?;
+    for event in events {
+        state.storage.delete_event(event).await?;
+    }
+    Ok(())
+}
 pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
     let events = state.storage.get_all_events().await?;
     let client = reqwest::Client::builder().gzip(true).build()?;

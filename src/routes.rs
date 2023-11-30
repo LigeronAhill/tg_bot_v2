@@ -22,6 +22,11 @@ pub async fn telegram(
             .await
             .map_err(|e| crate::errors::MyError::Static(e.to_string()))?;
         Ok(StatusCode::OK)
+    } else if payload["message"]["text"] == "/clear" {
+        telegram::clear_events(state)
+            .await
+            .map_err(|e| MyError::Static(e.to_string()))?;
+        Ok(StatusCode::OK)
     } else {
         let mut text: String = match serde_json::to_string_pretty(&payload) {
             Ok(string) => string,
