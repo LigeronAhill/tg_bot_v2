@@ -1,4 +1,84 @@
+// use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+
+// use crate::models::{moy_sklad::product::ProductFromMoySklad, AppState};
+#[serde_with::skip_serializing_none]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WooProductCreateUpdate {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub product_type: ProductType,
+    pub status: ProductStatus,
+    pub catalog_visibility: Visibility,
+    pub short_description: String,
+    pub sku: String,
+    pub regular_price: String,
+    pub sale_price: Option<String>,
+    pub manage_stock: bool,
+    pub backorders: BackOrder,
+    pub weight: String,
+    pub shipping_class: String,
+    pub categories: Vec<CategoriesProperties>,
+    pub attributes: Option<Vec<AttributesProperties>>,
+    pub default_attributes: Option<Vec<DefaultAttributesProperties>>,
+    pub meta_data: Vec<MetaDataProperties>,
+}
+// impl WooProductCreateUpdate {
+//     pub async fn from_ms(
+//         _state: AppState,
+//         product_from_ms: ProductFromMoySklad,
+//     ) -> anyhow::Result<Self> {
+//         let _client = reqwest::Client::builder().gzip(true).build()?;
+//         if product_from_ms.variants_count == 0 {
+//             Ok(Self {
+//                 name: product_from_ms.name,
+//                 product_type: ProductType::Simple,
+//                 status: ProductStatus::Publish,
+//                 catalog_visibility: Visibility::Visible,
+//                 short_description: product_from_ms
+//                     .description
+//                     .unwrap_or("Описание товара".to_string()),
+//                 sku: product_from_ms
+//                     .article
+//                     .unwrap_or(String::from("TEMPORARY_SKU")),
+//                 regular_price: todo!(),
+//                 sale_price: todo!(),
+//                 manage_stock: true,
+//                 backorders: BackOrder::Yes,
+//                 weight: product_from_ms.weight.unwrap_or(0.0).to_string(),
+//                 shipping_class: String::from("large"),
+//                 categories: todo!(),
+//                 attributes: todo!(),
+//                 default_attributes: todo!(),
+//                 meta_data: todo!(),
+//             })
+//         } else {
+//             Ok(Self {
+//                 name: product_from_ms.name,
+//                 product_type: ProductType::Variable,
+//                 status: ProductStatus::Publish,
+//                 catalog_visibility: Visibility::Visible,
+//                 short_description: product_from_ms
+//                     .description
+//                     .unwrap_or("Описание товара".to_string()),
+//                 sku: product_from_ms
+//                     .article
+//                     .unwrap_or(String::from("TEMPORARY_SKU")),
+//                 regular_price: todo!(),
+//                 sale_price: todo!(),
+//                 manage_stock: true,
+//                 backorders: BackOrder::Yes,
+//                 weight: product_from_ms.weight.unwrap_or(0.0).to_string(),
+//                 shipping_class: String::from("large"),
+//                 categories: todo!(),
+//                 attributes: todo!(),
+//                 default_attributes: todo!(),
+//                 meta_data: todo!(),
+//             })
+//         }
+//     }
+// }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProductFromWoo {

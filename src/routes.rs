@@ -1,4 +1,4 @@
-use crate::errors::{MyError, Result};
+use crate::errors::Result;
 use crate::models::moy_sklad::Audit;
 use crate::models::woocommerce::product::ProductFromWoo;
 use crate::models::{product::Product, AppState};
@@ -18,22 +18,26 @@ pub async fn telegram(
     Json(payload): Json<Value>,
 ) -> Result<StatusCode> {
     if payload["message"]["text"] == "/sync" {
-        telegram::sync_events(state)
-            .await
-            .map_err(|_| MyError::DbError)?
+        match telegram::sync_categories(state.clone()).await {
+            Ok(_) => Ok(StatusCode::OK),
+            Err(e) => {
+                let text = e.to_string();
+                state.bot.send_message(state.tokens.my_tg_id, text).await?;
+                Ok(StatusCode::OK)
+            }
+        }
+        // telegram::sync_events(state)
+        //     .await
+        //     .map_err(|_| MyError::DbError)?
     } else {
         let mut text: String = match serde_json::to_string_pretty(&payload) {
             Ok(string) => string,
             Err(_) => "Что-то непонятное пришло".to_string(),
         };
         text.push_str("\n\n\n из телеграм");
-        state
-            .bot
-            .send_message(state.tokens.my_tg_id, text)
-            .await
-            .expect("error sending tg message");
+        state.bot.send_message(state.tokens.my_tg_id, text).await?;
+        Ok(StatusCode::OK)
     }
-    Ok(StatusCode::OK)
 }
 
 pub async fn ms_webhook(
