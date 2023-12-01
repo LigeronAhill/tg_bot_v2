@@ -1,127 +1,108 @@
+use anyhow::Result;
+
 use crate::models::{
     moy_sklad::{product::ProductFromMoySklad, Action},
-    woocommerce::product::ProductFromWoo,
+    woocommerce::product::WooProductCreateUpdate,
     AppState,
 };
-pub async fn clear_events(state: AppState) -> anyhow::Result<()> {
+pub const WOO: &str = "https://safira.club//wp-json/wc/v3/products";
+pub async fn clear_events(state: AppState) -> Result<()> {
     let events = state.storage.get_all_events().await?;
     for event in events {
         state.storage.delete_event(event).await?;
     }
     Ok(())
 }
-pub async fn sync_events(state: AppState) -> anyhow::Result<()> {
-    let events = state.storage.get_all_events().await?;
-    let client = reqwest::Client::builder().gzip(true).build()?;
+pub async fn sync_events(state: AppState) -> Result<String> {
+    let events = state.clone().storage.get_all_events().await?;
+    let mut count = 0;
     for event in events {
-        if let Some(product_url) = event.meta.href.clone() {
-            let product = client
-                .get(&product_url)
-                .bearer_auth(&state.tokens.ms_token)
-                .send()
-                .await?
-                .json::<ProductFromMoySklad>()
-                .await?;
-            if product.path_name.contains("Не для интернета")
-                || product.path_name.contains("Услуги")
-                || product.path_name.contains("Сопутствующие товары")
-            {
-                state.storage.delete_event(event).await?
-            } else {
-                match event.action {
-                    Action::CREATE => todo!(),
-                    Action::UPDATE => {
-                        let Some(sku) = product.article else {
-                            return Err(anyhow::Error::msg("NO SKU!"));
-                        };
-                        let woo_url = "https://safira.club/wp-json/wc/v3/products";
-                        let product_url = format!("{woo_url}/{}", product.external_code);
-                        let woo_response = client
-                            .get(product_url)
-                            .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
-                            .send()
-                            .await?;
-                        if woo_response.status() == axum::http::StatusCode::OK {
-                            todo!()
-                        } else {
-                            let params = [("sku".to_string(), sku)];
-                            let woo_response = client
-                                .get(woo_url)
-                                .query(&params)
-                                .basic_auth(
-                                    &state.tokens.woo_token_1,
-                                    Some(&state.tokens.woo_token_2),
-                                )
-                                .send()
-                                .await?
-                                .json::<Vec<ProductFromWoo>>()
-                                .await?;
-                            match woo_response.len() {
-                                1 => {
-                                    let product_from_woo = woo_response[0].clone();
-                                    if let Some(cat_url) =
-                                        &product.product_folder.unwrap().meta.href
-                                    {
-                                        let cat_id =
-                                            &product_from_woo.categories.unwrap()[0].id.unwrap();
-                                        let mut cat_upd = std::collections::HashMap::new();
-                                        cat_upd.insert("externalCode", &cat_id);
-                                        client
-                                            .put(cat_url)
-                                            .bearer_auth(&state.tokens.ms_token)
-                                            .json(&cat_upd)
-                                            .send()
-                                            .await?;
-                                        let mut upd = std::collections::HashMap::new();
-                                        upd.insert("externalCode", &product_from_woo.id);
-                                        if let Some(p_url) = product.meta.href {
-                                            let response = client
-                                                .put(&p_url)
-                                                .bearer_auth(&state.tokens.ms_token)
-                                                .json(&upd)
-                                                .send()
-                                                .await?;
-                                            match response.status() {
-                                                axum::http::StatusCode::OK => {
-                                                    state.storage.delete_event(event).await?
-                                                }
-                                                _ => continue,
-                                            }
-                                        }
-                                    } else {
-                                        continue;
-                                    }
-                                }
-                                _ => {
-                                    let error = format!("Can't find product {}", product.name);
-                                    return Err(anyhow::Error::msg(error));
-                                }
-                            }
-                        }
-                    }
-                    Action::DELETE => {
-                        let woo_url = format!(
-                            "https://safira.club/wp-json/wc/v3/products/{}",
-                            product.external_code
-                        );
-                        let response = client
-                            .delete(woo_url)
-                            .basic_auth(
-                                state.tokens.woo_token_1.clone(),
-                                Some(state.tokens.woo_token_2.clone()),
-                            )
-                            .send()
-                            .await?;
-                        match response.status() {
-                            axum::http::StatusCode::OK => state.storage.delete_event(event).await?,
-                            _ => continue,
-                        }
-                    }
-                }
-            }
-        } else {
+        let Some(uri) = event.meta.href else {
+            state.clone().storage.delete_event(event).await?;
             continue;
+        };
+        match event.action {
+            Action::CREATE => create_woo_product(state.clone(), uri).await?,
+            Action::UPDATE => update_woo_product(state.clone(), uri).await?,
+            Action::DELETE => delete_woo_product(state.clone(), uri).await?,
         }
+        count += 1;
     }
+    let result = format!("{count} updated");
+    Ok(result)
+}
+pub async fn create_woo_product(state: AppState, uri: String) -> Result<()> {
+    let client = reqwest::Client::builder().gzip(true).build()?;
+    let ms_product: ProductFromMoySklad = client
+        .get(&uri)
+        .bearer_auth(&state.tokens.ms_token)
+        .send()
+        .await?
+        .json()
+        .await?;
+    let prod = WooProductCreateUpdate::from_ms(state.clone(), ms_product.clone()).await?;
+    client
+        .post(WOO)
+        .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
+        .json(&prod)
+        .send()
+        .await?;
     Ok(())
+}
+pub async fn update_woo_product(state: AppState, uri: String) -> Result<()> {
+    let client = reqwest::Client::builder().gzip(true).build()?;
+    let ms_product: ProductFromMoySklad = client
+        .get(&uri)
+        .bearer_auth(&state.tokens.ms_token)
+        .send()
+        .await?
+        .json()
+        .await?;
+    let prod = WooProductCreateUpdate::from_ms(state.clone(), ms_product.clone()).await?;
+    let Some(sku) = ms_product.article else {
+        return Err(anyhow::Error::msg("NO SKU!!!"));
+    };
+    let id = get_woo_id(state.clone(), sku.clone()).await?;
+    let url = format!("{}/{}", WOO, id);
+    client
+        .put(url)
+        .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
+        .json(&prod)
+        .send()
+        .await?;
+    Ok(())
+}
+pub async fn delete_woo_product(state: AppState, uri: String) -> Result<()> {
+    let client = reqwest::Client::builder().gzip(true).build()?;
+    let ms_response = client
+        .get(uri)
+        .bearer_auth(&state.tokens.ms_token)
+        .send()
+        .await?;
+    let val = ms_response.json::<serde_json::Value>().await?;
+    let sku_opt = val["article"].as_str();
+    let Some(sku) = sku_opt else {
+        return Err(anyhow::Error::msg("NO SKU!"));
+    };
+    let woo_id = get_woo_id(state.clone(), sku.to_string()).await?;
+    let url = format!("{}/{}", WOO, woo_id);
+    client
+        .delete(url)
+        .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
+        .send()
+        .await?;
+    Ok(())
+}
+pub async fn get_woo_id(state: AppState, sku: String) -> Result<i64> {
+    let client = reqwest::Client::builder().gzip(true).build()?;
+    let response = client
+        .get(WOO)
+        .query(&[("sku", sku)])
+        .basic_auth(state.tokens.woo_token_1, Some(state.tokens.woo_token_2))
+        .send()
+        .await?;
+    let id = response.json::<Vec<serde_json::Value>>().await?[0]["id"]
+        .as_i64()
+        .unwrap();
+    Ok(id)
 }

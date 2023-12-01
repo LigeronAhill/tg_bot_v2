@@ -18,9 +18,10 @@ pub async fn telegram(
     Json(payload): Json<Value>,
 ) -> Result<StatusCode> {
     if payload["message"]["text"] == "/sync" {
-        telegram::sync_events(state)
+        let text = telegram::sync_events(state.clone())
             .await
             .map_err(|e| crate::errors::MyError::Static(e.to_string()))?;
+        state.bot.send_message(state.tokens.my_tg_id, text).await?;
         Ok(StatusCode::OK)
     } else if payload["message"]["text"] == "/clear" {
         telegram::clear_events(state)

@@ -41,7 +41,7 @@ pub struct Event {
     pub id: Option<ObjectId>,
     pub meta: Meta,
     pub action: Action,
-    pub account_id: String,
+    // pub account_id: String,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Action {
