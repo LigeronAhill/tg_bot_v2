@@ -17,7 +17,7 @@ pub async fn sync_events(state: AppState) -> Result<String> {
     let events = state.clone().storage.get_all_events().await?;
     let mut count = 0;
     for event in events {
-        let Some(uri) = event.meta.href else {
+        let Some(uri) = event.meta.href.to_owned() else {
             state.clone().storage.delete_event(event).await?;
             continue;
         };
@@ -26,6 +26,7 @@ pub async fn sync_events(state: AppState) -> Result<String> {
             Action::UPDATE => update_woo_product(state.clone(), uri).await?,
             Action::DELETE => delete_woo_product(state.clone(), uri).await?,
         }
+        state.storage.delete_event(event).await?;
         count += 1;
     }
     let result = format!("{count} updated");

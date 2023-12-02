@@ -1,5 +1,7 @@
 // use std::collections::HashMap;
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -82,14 +84,14 @@ impl WooProductCreateUpdate {
         let category = match id {
             Ok(update) => {
                 let cat_url = format!("{}/categories?product={}", WOO, update);
-                let cat_val: serde_json::Value = client
+                let cat_val: Vec<serde_json::Value> = client
                     .get(cat_url)
                     .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
                     .send()
                     .await?
                     .json()
                     .await?;
-                let cat_id = cat_val["id"].as_i64().unwrap();
+                let cat_id = cat_val[0]["id"].as_i64().unwrap();
                 CategoriesProperties {
                     id: Some(cat_id),
                     name: None,
@@ -161,7 +163,7 @@ impl WooProductCreateUpdate {
                     let opt = cntr_val["name"].as_str().unwrap().to_string();
 
                     let country = AttributesProperties {
-                        id: None,
+                        id: Some(87),
                         name: Some(String::from("Страна")),
                         position: None,
                         visible: Some(true),
@@ -170,6 +172,7 @@ impl WooProductCreateUpdate {
                     };
                     attrs.push(country);
                 }
+                let ids_map = get_attrs_ids(&state).await?;
                 for attribute_from_ms in attributes_from_ms {
                     let opt = match attribute_from_ms.attribute_type.as_str() {
                         "customentity" => attribute_from_ms.value["name"]
@@ -178,8 +181,9 @@ impl WooProductCreateUpdate {
                             .to_string(),
                         _ => attribute_from_ms.value.as_str().unwrap().to_string(),
                     };
+                    let id = ids_map.get(&attribute_from_ms.name).copied().unwrap();
                     let attr = AttributesProperties {
-                        id: None,
+                        id,
                         name: Some(attribute_from_ms.name),
                         position: None,
                         visible: Some(true),
@@ -211,6 +215,24 @@ impl WooProductCreateUpdate {
             meta_data: vec![],
         })
     }
+}
+
+async fn get_attrs_ids(state: &AppState) -> anyhow::Result<HashMap<String, Option<i64>>> {
+    let client = reqwest::Client::builder().gzip(true).build()?;
+    let vec_atr: Vec<serde_json::Value> = client
+        .get("https://safira.club/wp-json/wc/v3/products/attributes")
+        .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
+        .send()
+        .await?
+        .json()
+        .await?;
+    let mut result = HashMap::new();
+    for atr in vec_atr {
+        let v = atr["id"].as_i64();
+        let k = atr["name"].as_str().unwrap().to_string();
+        result.insert(k, v);
+    }
+    Ok(result)
 }
 
 #[serde_with::skip_serializing_none]
