@@ -1,10 +1,8 @@
 use axum::routing::{delete, get, post, put};
 use axum::Router;
-use db::Storage;
-use models::Tokens;
+
 use mongodb::Database;
 use shuttle_secrets::SecretStore;
-use tg::Bot;
 
 pub mod db;
 pub mod errors;
@@ -30,7 +28,6 @@ async fn axum(
         .parse::<i64>()
         .expect("cant parse group id");
     let ms_token = secret_store.get("MS_TOKEN").expect("no ms token!");
-    let storage = Storage::new(&db).await;
     let woo_token_1 = secret_store
         .get("WOO_TOKEN_1")
         .expect("no woocommerce token!");
@@ -40,24 +37,31 @@ async fn axum(
     let yandex_token = secret_store.get("YANDEX_TOKEN").expect("no yandex token!");
 
     let market_token = secret_store.get("MARKET_TOKEN").expect("no market token");
-    storage
+    let app_state = models::AppState::new(
+        &db,
+        token,
+        ms_token,
+        woo_token_1,
+        woo_token_2,
+        my_tg_id,
+        safira_group_tg_id,
+        yandex_token,
+        market_token,
+    )
+    .await;
+    app_state
+        .storage
         .name_index_create()
         .await
         .expect("can't create index!");
-    let bot = Bot::new(token);
-    let app_state = models::AppState {
-        storage,
-        bot,
-        tokens: Tokens {
-            my_tg_id,
-            safira_group_tg_id,
-            ms_token,
-            woo_token_1,
-            woo_token_2,
-            yandex_token,
-            market_token,
-        },
-    };
+    let x = app_state
+        .storage
+        .sync_categories_and_attributes(app_state.clone())
+        .await;
+    match x {
+        Ok(_) => println!("OK"),
+        Err(e) => println!("{}", e),
+    }
     let router = Router::new()
         .route("/health", get(health))
         .route("/api/v1/telegram", post(telegram))

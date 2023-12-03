@@ -1,17 +1,9 @@
-// use std::collections::HashMap;
-
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    models::{moy_sklad::product::ProductFromMoySklad, AppState},
-    routes::telegram::{get_woo_id, WOO},
-};
-
+use crate::models::{moy_sklad::product::ProductFromMoySklad, AppState};
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WooProductCreateUpdate {
+pub struct WooProductCreate {
     pub name: String,
     #[serde(rename = "type")]
     pub product_type: ProductType,
@@ -25,26 +17,26 @@ pub struct WooProductCreateUpdate {
     pub backorders: BackOrder,
     pub weight: String,
     pub shipping_class: ShippingClass,
-    pub categories: Vec<CategoriesProperties>,
+    pub categories: Vec<CategoryCreate>,
     pub attributes: Vec<AttributesProperties>,
-    pub default_attributes: Vec<DefaultAttributesProperties>,
+    pub default_attributes: Vec<VariationProperties>,
     pub meta_data: Vec<MetaDataProperties>,
 }
-impl WooProductCreateUpdate {
-    pub async fn from_ms(
-        state: AppState,
-        product_from_ms: ProductFromMoySklad,
-    ) -> anyhow::Result<Self> {
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CategoryCreate {
+    pub id: i64,
+}
+impl WooProductCreate {
+    pub async fn from_ms(state: &AppState, product: ProductFromMoySklad) -> anyhow::Result<Self> {
         let client = reqwest::Client::builder().gzip(true).build()?;
-        let product_type = match product_from_ms.variants_count {
+        let product_type = match product.variants_count {
             0 => ProductType::Simple,
             _ => ProductType::Variable,
         };
-        let Some(sku) = product_from_ms.article else {
+        let Some(sku) = product.article.clone() else {
             return Err(anyhow::Error::msg("NO SKU!!!"));
         };
-        let id = get_woo_id(state.clone(), sku.clone()).await;
-        let Some(prices) = product_from_ms.sale_prices else {
+        let Some(prices) = product.sale_prices.clone() else {
             return Err(anyhow::Error::msg("NO PRICES!!!"));
         };
         let mut regular_price = String::new();
@@ -76,82 +68,22 @@ impl WooProductCreateUpdate {
                 sale_price_from_ms = Some(format!("{}", (rate * price.value) / 100.0));
             }
         }
-        let shipping_class = match product_from_ms.path_name.contains("Ковровая плитка")
-        {
+        let shipping_class = match product.path_name.contains("Ковровая плитка") {
             true => ShippingClass::Small,
             false => ShippingClass::Large,
         };
-        let category = match id {
-            Ok(update) => {
-                let cat_url = format!("{}/categories?product={}", WOO, update);
-                let cat_val: Vec<serde_json::Value> = client
-                    .get(cat_url)
-                    .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
-                    .send()
-                    .await?
-                    .json()
-                    .await?;
-                let cat_id = cat_val[0]["id"].as_i64().unwrap();
-                CategoriesProperties {
-                    id: Some(cat_id),
-                    name: None,
-                    slug: None,
-                    parent: None,
-                }
-            }
-            Err(_) => {
-                let cat_url = product_from_ms.product_folder.unwrap().meta.href.unwrap();
-                let cat_val: serde_json::Value = client
-                    .get(&cat_url)
-                    .bearer_auth(&state.tokens.ms_token)
-                    .send()
-                    .await?
-                    .json()
-                    .await?;
-                let parent_url = cat_val["productFolder"]["meta"]["href"].as_str().unwrap();
-                let parent_val: serde_json::Value = client
-                    .get(parent_url)
-                    .bearer_auth(&state.tokens.ms_token)
-                    .send()
-                    .await?
-                    .json()
-                    .await?;
-                let parent_cat_id = parent_val["externalCode"].as_i64().unwrap();
-                let name = cat_val["name"].as_str().unwrap().to_string();
-                let create_url = format!("{}/categories", WOO);
-                let mut new_cat = CategoriesProperties {
-                    id: None,
-                    name: Some(name),
-                    slug: None,
-                    parent: Some(parent_cat_id),
-                };
-                let create_cat_resp: serde_json::Value = client
-                    .post(create_url)
-                    .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
-                    .json(&new_cat)
-                    .send()
-                    .await?
-                    .json()
-                    .await?;
-                let new_cat_id = create_cat_resp["id"].as_str().unwrap().to_string();
-                let new_cat_id_number = create_cat_resp["id"].as_i64().unwrap();
-                let mut params = std::collections::HashMap::new();
-                params.insert("externalCode", new_cat_id.clone());
-                client
-                    .put(cat_url)
-                    .bearer_auth(&state.tokens.ms_token)
-                    .json(&params)
-                    .send()
-                    .await?;
-                new_cat.id = Some(new_cat_id_number);
-                new_cat
-            }
+        let category_path: Vec<&str> = product.path_name.split('/').collect();
+        let category_name = category_path[category_path.len() - 1];
+        let mut categories = Vec::new();
+        let id = match state.storage.category_id(category_name.to_string()).await {
+            Some(id) => id,
+            None => state.woo_client.create_category(category_name).await?,
         };
-
-        let attributes = match product_from_ms.attributes {
+        categories.push(CategoryCreate { id });
+        let mut attributes = match product.attributes.clone() {
             Some(attributes_from_ms) => {
                 let mut attrs: Vec<AttributesProperties> = vec![];
-                if let Some(cntr) = product_from_ms.country {
+                if let Some(cntr) = product.country.clone() {
                     let cntr_url = cntr.meta.href.unwrap();
                     let cntr_val: serde_json::Value = client
                         .get(cntr_url)
@@ -172,7 +104,6 @@ impl WooProductCreateUpdate {
                     };
                     attrs.push(country);
                 }
-                let ids_map = get_attrs_ids(&state).await?;
                 for attribute_from_ms in attributes_from_ms {
                     let opt = match attribute_from_ms.attribute_type.as_str() {
                         "customentity" => attribute_from_ms.value["name"]
@@ -181,7 +112,7 @@ impl WooProductCreateUpdate {
                             .to_string(),
                         _ => attribute_from_ms.value.as_str().unwrap().to_string(),
                     };
-                    let id = ids_map.get(&attribute_from_ms.name).copied().unwrap();
+                    let id = state.storage.attribute_id(&attribute_from_ms.name).await;
                     let attr = AttributesProperties {
                         id,
                         name: Some(attribute_from_ms.name),
@@ -196,43 +127,56 @@ impl WooProductCreateUpdate {
             }
             None => vec![],
         };
+        let mut default_attributes = vec![];
+        if product.variants_count != 0 {
+            let characteristics = state.ms_client.get_variants(state, &product).await?;
+            let mut options = vec![];
+            for char in &characteristics {
+                options.push(char.option.clone())
+            }
+            let var_attr = AttributesProperties {
+                id: Some(characteristics[0].id),
+                name: Some(characteristics[0].name.clone()),
+                position: None,
+                visible: Some(true),
+                variation: Some(true),
+                options: Some(options),
+            };
+            attributes.push(var_attr);
+            default_attributes.push(characteristics[0].clone());
+        }
+        // let pt = category_path[0];
+        // let mdp = match pt {
+        //     "Ковровая плитка" => {}
+        //     _ => {}
+        // };
+        let catalog_visibility = match product.archived {
+            true => Visibility::Hidden,
+            false => Visibility::Visible,
+        };
+        let status = match product.archived {
+            true => ProductStatus::Private,
+            false => ProductStatus::Publish,
+        };
         Ok(Self {
-            name: product_from_ms.name,
+            name: product.name,
             product_type,
-            status: ProductStatus::Publish,
-            catalog_visibility: Visibility::Visible,
-            short_description: product_from_ms.description,
+            status,
+            catalog_visibility,
+            short_description: product.description,
             sku,
             regular_price,
             sale_price: sale_price_from_ms,
             manage_stock: true,
             backorders: BackOrder::Yes,
-            weight: product_from_ms.weight.unwrap_or(0.0).to_string(),
+            weight: product.weight.unwrap_or(0.0).to_string(),
             shipping_class,
-            categories: vec![category],
+            categories,
             attributes,
-            default_attributes: vec![],
+            default_attributes,
             meta_data: vec![],
         })
     }
-}
-
-async fn get_attrs_ids(state: &AppState) -> anyhow::Result<HashMap<String, Option<i64>>> {
-    let client = reqwest::Client::builder().gzip(true).build()?;
-    let vec_atr: Vec<serde_json::Value> = client
-        .get("https://safira.club/wp-json/wc/v3/products/attributes")
-        .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
-        .send()
-        .await?
-        .json()
-        .await?;
-    let mut result = HashMap::new();
-    for atr in vec_atr {
-        let v = atr["id"].as_i64();
-        let k = atr["name"].as_str().unwrap().to_string();
-        result.insert(k, v);
-    }
-    Ok(result)
 }
 
 #[serde_with::skip_serializing_none]
@@ -421,6 +365,13 @@ pub struct AttributesProperties {
     pub visible: Option<bool>,
     pub variation: Option<bool>,
     pub options: Option<Vec<String>>,
+}
+#[serde_with::skip_serializing_none]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VariationProperties {
+    pub id: i64,
+    pub name: String,
+    pub option: String,
 }
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

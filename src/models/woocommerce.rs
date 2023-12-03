@@ -1,5 +1,166 @@
+use std::collections::HashMap;
+
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
+
+use super::{moy_sklad::product::ProductFromMoySklad, AppState};
 pub mod product;
+#[derive(Clone)]
+pub struct Woo {
+    client_key: String,
+    client_secret: String,
+    client: reqwest::Client,
+}
+
+impl Woo {
+    pub async fn new(client_key: String, client_secret: String) -> Self {
+        Self {
+            client_key,
+            client_secret,
+            client: reqwest::Client::builder()
+                .gzip(true)
+                .build()
+                .expect("error building client"),
+        }
+    }
+    pub fn client(&self) -> reqwest::Client {
+        self.client.clone()
+    }
+    pub fn client_key(&self) -> String {
+        self.client_key.clone()
+    }
+    pub fn client_secret(&self) -> String {
+        self.client_secret.clone()
+    }
+    pub async fn get_categories(&self) -> Result<Vec<WOOCategoryDTO>> {
+        let mut final_result = vec![];
+        let mut page = 1;
+        while page < 5 {
+            let uri = format!(
+                "https://safira.club/wp-json/wc/v3/products/categories?page={}&per_page=99",
+                page
+            );
+            match self
+                .client
+                .get(&uri)
+                .basic_auth(self.client_key(), Some(self.client_secret()))
+                .send()
+                .await?
+                .json::<Vec<WOOCategoryDTO>>()
+                .await
+            {
+                Ok(result) => final_result.extend(result),
+                Err(e) => println!("{} on {}", e, page),
+            }
+            page += 1;
+        }
+        Ok(final_result)
+    }
+    pub async fn get_attributes(&self) -> Result<Vec<WOOAttributeDTO>> {
+        let result: Vec<WOOAttributeDTO> = self
+            .client
+            .get("https://safira.club/wp-json/wc/v3/products/attributes")
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(result)
+    }
+    pub async fn create_product(
+        &self,
+        state: &AppState,
+        product: ProductFromMoySklad,
+    ) -> Result<()> {
+        let prod = product::WooProductCreate::from_ms(state, product).await?;
+        self.client
+            .post("https://safira.club/wp-json/wc/v3/products")
+            .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
+            .json(&prod)
+            .send()
+            .await?;
+        Ok(())
+    }
+    pub async fn update_product(
+        &self,
+        state: &AppState,
+        product: ProductFromMoySklad,
+    ) -> Result<()> {
+        let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
+        let Some(sku) = product.article.clone() else {
+            return Err(anyhow::Error::msg("NO SKU!!!"));
+        };
+        match self.get_woo_id(&sku).await {
+            Ok(id) => {
+                let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
+                self.client
+                    .put(&url)
+                    .basic_auth(self.client_key(), Some(self.client_secret()))
+                    .json(&prod)
+                    .send()
+                    .await?;
+            }
+            Err(_) => self.create_product(state, product.clone()).await?,
+        }
+
+        Ok(())
+    }
+    pub async fn delete_product(&self, product: ProductFromMoySklad) -> Result<()> {
+        let Some(sku) = product.article else {
+            return Err(anyhow::Error::msg("NO SKU!!!"));
+        };
+        let id = self.get_woo_id(&sku).await?;
+        let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
+        self.client
+            .delete(&url)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?;
+        Ok(())
+    }
+
+    async fn create_category(&self, category_name: &str) -> Result<i64> {
+        let mut params = HashMap::new();
+        params.insert("name", category_name);
+        let response = self
+            .client
+            .post("https://safira.club/wp-json/wc/v3/products")
+            .json(&params)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?;
+        let value: serde_json::Value = response.json().await?;
+        let id = value["id"].as_i64().unwrap();
+        Ok(id)
+    }
+    pub async fn get_woo_id(&self, sku: &String) -> Result<i64> {
+        let response = self
+            .client
+            .get("https://safira.club//wp-json/wc/v3/products")
+            .query(&[("sku", sku)])
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?;
+        let vec_id = response.json::<Vec<serde_json::Value>>().await?;
+        if vec_id.is_empty() {
+            Err(anyhow::Error::msg("no id"))
+        } else {
+            Ok(vec_id[0]["id"].as_i64().unwrap())
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WOOCategoryDTO {
+    pub id: i64,
+    pub name: String,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WOOAttributeDTO {
+    pub id: i64,
+    pub name: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Href {
     pub href: String,
