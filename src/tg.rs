@@ -9,19 +9,23 @@ pub struct Bot {
     pub token: String,
     pub api_url: String,
     pub client: reqwest::Client,
+    pub admin: i64,
+    pub group: i64,
 }
 impl Bot {
-    pub fn new(token: String) -> Self {
+    pub fn new(token: &str, admin: &str, group: &str) -> Self {
         Self {
-            token: token.clone(),
-            api_url: format!("https://api.telegram.org/bot{}/", token.clone()),
+            token: token.to_owned(),
+            api_url: format!("https://api.telegram.org/bot{}/", token),
             client: reqwest::Client::new(),
+            admin: admin.parse().unwrap(),
+            group: group.parse().unwrap(),
         }
     }
-    pub async fn send_message(&self, chat_id: i64, text: String) -> Result<()> {
+    pub async fn send_message_admin(&self, text: &str) -> Result<()> {
         let method = "sendMessage";
         let url = format!("{}{}", self.api_url, method);
-        let ans = ForwardMessage::new(chat_id, text);
+        let ans = ForwardMessage::new(self.admin, text.to_owned());
         self.client
             .post(url)
             .json(&ans)

@@ -10,6 +10,25 @@ pub mod stock;
 const FROM_TIME: &str = "10:00";
 const TO_TIME: &str = "21:00";
 const OUTLET: &str = "1";
+#[derive(Clone)]
+pub struct MarketClient {
+    token: String,
+    check_token: String,
+}
+impl MarketClient {
+    pub fn new(token: &str, check_token: &str) -> Self {
+        Self {
+            token: token.to_owned(),
+            check_token: check_token.to_owned(),
+        }
+    }
+    pub fn token(&self) -> String {
+        self.token.clone()
+    }
+    pub fn check_token(&self) -> String {
+        self.check_token.clone()
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -75,7 +73,7 @@ impl Woo {
         let prod = product::WooProductCreate::from_ms(state, product).await?;
         self.client
             .post("https://safira.club/wp-json/wc/v3/products")
-            .basic_auth(&state.tokens.woo_token_1, Some(&state.tokens.woo_token_2))
+            .basic_auth(self.client_key(), Some(self.client_secret()))
             .json(&prod)
             .send()
             .await?;
@@ -119,12 +117,14 @@ impl Woo {
         Ok(())
     }
 
-    async fn create_category(&self, category_name: &str) -> Result<i64> {
-        let mut params = HashMap::new();
-        params.insert("name", category_name);
+    async fn create_category(&self, category_name: &str, parent_id: i64) -> Result<i64> {
+        let params = CategoryToCreate {
+            name: category_name.to_owned(),
+            parent: parent_id,
+        };
         let response = self
             .client
-            .post("https://safira.club/wp-json/wc/v3/products")
+            .post("https://safira.club/wp-json/wc/v3/products/categories")
             .json(&params)
             .basic_auth(self.client_key(), Some(self.client_secret()))
             .send()
@@ -148,6 +148,11 @@ impl Woo {
             Ok(vec_id[0]["id"].as_i64().unwrap())
         }
     }
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CategoryToCreate {
+    pub name: String,
+    pub parent: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

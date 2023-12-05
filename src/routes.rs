@@ -21,7 +21,7 @@ pub async fn telegram(
         let text = telegram::sync_events(state.clone())
             .await
             .map_err(|e| crate::errors::MyError::Static(e.to_string()))?;
-        state.bot.send_message(state.tokens.my_tg_id, text).await?;
+        state.bot.send_message_admin(&text).await?;
         Ok(StatusCode::OK)
     } else if payload["message"]["text"] == "/clear" {
         telegram::clear_events(state)
@@ -34,7 +34,7 @@ pub async fn telegram(
             Err(_) => "Что-то непонятное пришло".to_string(),
         };
         text.push_str("\n\n\n из телеграм");
-        state.bot.send_message(state.tokens.my_tg_id, text).await?;
+        state.bot.send_message_admin(&text).await?;
         Ok(StatusCode::OK)
     }
 }
@@ -45,7 +45,7 @@ pub async fn ms_webhook(
 ) -> Result<StatusCode> {
     state.storage.add_events(payload.events.clone()).await?;
     let text = format!("Received {} updates", payload.events.len());
-    state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    state.bot.send_message_admin(&text).await?;
     Ok(StatusCode::OK)
 }
 pub async fn woo_product(
@@ -53,7 +53,7 @@ pub async fn woo_product(
     Json(payload): Json<ProductFromWoo>,
 ) -> Result<StatusCode> {
     let text = payload.name;
-    state.bot.send_message(state.tokens.my_tg_id, text).await?;
+    state.bot.send_message_admin(&text).await?;
     Ok(StatusCode::OK)
 }
 
@@ -69,7 +69,7 @@ pub async fn woo_webhook(
             Err(_) => "Что-то непонятное пришло".to_string(),
         };
         text.push_str("\n\n\n из WooCommerce");
-        state.bot.send_message(state.tokens.my_tg_id, text).await?;
+        state.bot.send_message_admin(&text).await?;
     }
     Ok(StatusCode::OK)
 }

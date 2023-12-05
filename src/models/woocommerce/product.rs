@@ -48,7 +48,7 @@ impl WooProductCreate {
                 };
                 let ms_curr_response = client
                     .get(cur_url)
-                    .bearer_auth(&state.tokens.ms_token)
+                    .bearer_auth(&state.ms_client.token())
                     .send()
                     .await?;
                 let curr_val: serde_json::Value = ms_curr_response.json().await?;
@@ -60,7 +60,7 @@ impl WooProductCreate {
                 };
                 let ms_curr_response = client
                     .get(cur_url)
-                    .bearer_auth(&state.tokens.ms_token)
+                    .bearer_auth(&state.ms_client.token())
                     .send()
                     .await?;
                 let curr_val: serde_json::Value = ms_curr_response.json().await?;
@@ -73,11 +73,22 @@ impl WooProductCreate {
             false => ShippingClass::Large,
         };
         let category_path: Vec<&str> = product.path_name.split('/').collect();
+        let parent_cat = category_path[0];
+        let parent_id = state
+            .storage
+            .category_id(parent_cat.to_owned())
+            .await
+            .unwrap();
         let category_name = category_path[category_path.len() - 1];
         let mut categories = Vec::new();
         let id = match state.storage.category_id(category_name.to_string()).await {
             Some(id) => id,
-            None => state.woo_client.create_category(category_name).await?,
+            None => {
+                state
+                    .woo_client
+                    .create_category(category_name, parent_id)
+                    .await?
+            }
         };
         categories.push(CategoryCreate { id });
         let mut attributes = match product.attributes.clone() {
@@ -87,7 +98,7 @@ impl WooProductCreate {
                     let cntr_url = cntr.meta.href.unwrap();
                     let cntr_val: serde_json::Value = client
                         .get(cntr_url)
-                        .bearer_auth(&state.tokens.ms_token)
+                        .bearer_auth(&state.ms_client.token())
                         .send()
                         .await?
                         .json()

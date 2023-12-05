@@ -24,7 +24,7 @@ fn check_token(headers: HeaderMap, token: String) -> bool {
 }
 
 pub async fn ymwebhook(State(state): State<AppState>, headers: HeaderMap) -> Result<StatusCode> {
-    if !check_token(headers, state.tokens.yandex_token) {
+    if !check_token(headers, state.market_client.check_token()) {
         return Ok(StatusCode::FORBIDDEN);
     }
     Ok(StatusCode::OK)
@@ -40,7 +40,7 @@ pub async fn cart(
     State(state): State<AppState>,
     Json(payload): Json<MarketCartRequest>,
 ) -> Result<Json<MarketCartResponse>> {
-    if !check_token(headers, state.tokens.yandex_token) {
+    if !check_token(headers, state.market_client.check_token()) {
         return Err(crate::errors::MyError::TokenError);
     }
     let resp = MarketCartResponse::new(payload);
@@ -61,7 +61,7 @@ pub async fn order_accept(
     headers: HeaderMap,
     Json(payload): Json<OrderAccept>,
 ) -> Result<Json<AcceptResponse>> {
-    if !check_token(headers, state.tokens.yandex_token) {
+    if !check_token(headers, state.market_client.check_token()) {
         return Err(crate::errors::MyError::TokenError);
     }
     let _ = payload;
@@ -83,7 +83,7 @@ pub async fn order_status(
     headers: HeaderMap,
     Json(payload): Json<OrderStatus>,
 ) -> Result<StatusCode> {
-    if !check_token(headers, state.tokens.yandex_token) {
+    if !check_token(headers, state.market_client.check_token()) {
         return Err(crate::errors::MyError::TokenError);
     }
     let _ = payload;
@@ -105,7 +105,7 @@ pub async fn order_cancelation_notify(
     headers: HeaderMap,
     Json(payload): Json<OrderStatus>,
 ) -> Result<StatusCode> {
-    if !check_token(headers, state.tokens.yandex_token) {
+    if !check_token(headers, state.market_client.check_token()) {
         return Err(crate::errors::MyError::TokenError);
     }
     let _ = payload;
@@ -127,7 +127,7 @@ pub async fn stocks(
     State(state): State<AppState>,
     Json(payload): Json<StocksRequest>,
 ) -> Result<Json<StocksResponse>> {
-    if !check_token(headers, state.tokens.yandex_token) {
+    if !check_token(headers, state.market_client.check_token()) {
         return Err(crate::errors::MyError::TokenError);
     }
     let resp = StocksResponse::test(payload);

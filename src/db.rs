@@ -142,7 +142,7 @@ impl Storage {
         self.event.delete_one(doc! {"_id": oid}, None).await?;
         Ok(())
     }
-    pub async fn sync_categories_and_attributes(&self, state: AppState) -> anyhow::Result<()> {
+    pub async fn sync_categories_and_attributes(&self, state: &AppState) -> anyhow::Result<()> {
         let ms = state.ms_client.get_categories().await?;
         println!("{} from MoySklad", &ms.len());
         let woo = state.woo_client.get_categories().await?;

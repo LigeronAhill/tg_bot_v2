@@ -1,10 +1,11 @@
 use bson::oid::ObjectId;
-use mongodb::Database;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{db::Storage, tg::Bot};
 
 use self::{
+    market::MarketClient,
     moy_sklad::{MSAttributeDTO, MSCategoryDTO},
     woocommerce::{WOOAttributeDTO, WOOCategoryDTO},
 };
@@ -19,46 +20,24 @@ pub struct AppState {
     pub bot: Bot,
     pub ms_client: moy_sklad::MoySklad,
     pub woo_client: woocommerce::Woo,
-    pub tokens: Tokens,
+    pub market_client: MarketClient,
 }
 impl AppState {
-    pub async fn new(
-        db: &Database,
-        bot_token: String,
-        ms_token: String,
-        woo_token_1: String,
-        woo_token_2: String,
-        my_tg_id: i64,
-        safira_group_tg_id: i64,
-        yandex_token: String,
-        market_token: String,
+    pub fn new(
+        storage: Storage,
+        bot: Bot,
+        ms_client: moy_sklad::MoySklad,
+        woo_client: woocommerce::Woo,
+        market_client: MarketClient,
     ) -> Self {
         Self {
-            storage: Storage::new(db).await,
-            bot: Bot::new(bot_token),
-            ms_client: moy_sklad::MoySklad::new(ms_token.clone()).await,
-            woo_client: woocommerce::Woo::new(woo_token_1.clone(), woo_token_2.clone()).await,
-            tokens: Tokens {
-                my_tg_id,
-                safira_group_tg_id,
-                ms_token,
-                woo_token_1,
-                woo_token_2,
-                yandex_token,
-                market_token,
-            },
+            storage,
+            bot,
+            ms_client,
+            woo_client,
+            market_client,
         }
     }
-}
-#[derive(Clone)]
-pub struct Tokens {
-    pub my_tg_id: i64,
-    pub safira_group_tg_id: i64,
-    pub ms_token: String,
-    pub woo_token_1: String,
-    pub woo_token_2: String,
-    pub yandex_token: String,
-    pub market_token: String,
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CategoryDB {

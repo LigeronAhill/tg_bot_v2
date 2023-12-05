@@ -10,10 +10,7 @@ pub async fn clear_events(state: AppState) -> Result<()> {
     Ok(())
 }
 pub async fn sync_events(state: AppState) -> Result<String> {
-    let _ = state
-        .storage
-        .sync_categories_and_attributes(state.clone())
-        .await;
+    state.storage.sync_categories_and_attributes(&state).await?;
     let events = state.clone().storage.get_all_events().await?;
     let mut count = 0;
     for event in events {
@@ -22,13 +19,20 @@ pub async fn sync_events(state: AppState) -> Result<String> {
             continue;
         };
         let product = state.ms_client.retrieve_product(&uri).await?;
-        match event.action {
-            Action::CREATE => state.woo_client.create_product(&state, product).await?,
-            Action::UPDATE => state.woo_client.update_product(&state, product).await?,
-            Action::DELETE => state.woo_client.delete_product(product).await?,
+        if product.path_name.contains("Не для интернета")
+            || product.path_name.contains("Сопутствующие товары")
+            || product.path_name.contains("Услуги")
+        {
+            continue;
+        } else {
+            match event.action {
+                Action::CREATE => state.woo_client.create_product(&state, product).await?,
+                Action::UPDATE => state.woo_client.update_product(&state, product).await?,
+                Action::DELETE => state.woo_client.delete_product(product).await?,
+            }
+            state.storage.delete_event(event).await?;
+            count += 1;
         }
-        state.storage.delete_event(event).await?;
-        count += 1;
     }
     let result = format!("{count} updated");
     Ok(result)

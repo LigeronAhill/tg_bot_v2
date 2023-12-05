@@ -1,6 +1,10 @@
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 
+use db::Storage;
+use models::market::MarketClient;
+use models::moy_sklad::MoySklad;
+use models::woocommerce::Woo;
 use mongodb::Database;
 use shuttle_secrets::SecretStore;
 
@@ -17,16 +21,8 @@ async fn axum(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> shuttle_axum::ShuttleAxum {
     let token = secret_store.get("TG_TOKEN").expect("token not set!");
-    let my_tg_id = secret_store
-        .get("MY_TG_ID")
-        .expect("no tg id of my!")
-        .parse::<i64>()
-        .expect("cant parse id");
-    let safira_group_tg_id = secret_store
-        .get("GROUP_TG_ID")
-        .expect("no group id!")
-        .parse::<i64>()
-        .expect("cant parse group id");
+    let my_tg_id = secret_store.get("MY_TG_ID").expect("no tg id of my!");
+    let safira_group_tg_id = secret_store.get("GROUP_TG_ID").expect("no group id!");
     let ms_token = secret_store.get("MS_TOKEN").expect("no ms token!");
     let woo_token_1 = secret_store
         .get("WOO_TOKEN_1")
@@ -37,31 +33,15 @@ async fn axum(
     let yandex_token = secret_store.get("YANDEX_TOKEN").expect("no yandex token!");
 
     let market_token = secret_store.get("MARKET_TOKEN").expect("no market token");
-    let app_state = models::AppState::new(
-        &db,
-        token,
-        ms_token,
-        woo_token_1,
-        woo_token_2,
-        my_tg_id,
-        safira_group_tg_id,
-        yandex_token,
-        market_token,
-    )
-    .await;
-    app_state
-        .storage
-        .name_index_create()
-        .await
-        .expect("can't create index!");
-    let x = app_state
-        .storage
-        .sync_categories_and_attributes(app_state.clone())
-        .await;
-    match x {
-        Ok(_) => println!("OK"),
-        Err(e) => println!("{}", e),
-    }
+    let storage = Storage::new(&db).await;
+    let _ = storage.name_index_create().await;
+
+    let bot = tg::Bot::new(&token, &my_tg_id, &safira_group_tg_id);
+    let ms_client = MoySklad::new(ms_token).await;
+    let woo_client = Woo::new(woo_token_1, woo_token_2).await;
+    let market_client = MarketClient::new(&market_token, &yandex_token);
+    let app_state = models::AppState::new(storage, bot, ms_client, woo_client, market_client);
+
     let router = Router::new()
         .route("/health", get(health))
         .route("/api/v1/telegram", post(telegram))
