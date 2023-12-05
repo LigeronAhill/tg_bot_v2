@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::errors::{MyError, Result};
 pub fn parse_text(text: String) -> String {
     text.to_string()
 }
@@ -22,17 +21,49 @@ impl Bot {
             group: group.parse().unwrap(),
         }
     }
-    pub async fn send_message_admin(&self, text: &str) -> Result<()> {
+    pub fn token(&self) -> String {
+        self.token.clone()
+    }
+    pub async fn send_message_admin(&self, text: &str) -> anyhow::Result<()> {
         let method = "sendMessage";
         let url = format!("{}{}", self.api_url, method);
         let ans = ForwardMessage::new(self.admin, text.to_owned());
-        self.client
-            .post(url)
-            .json(&ans)
-            .send()
-            .await
-            .map_err(|_| MyError::ReqwestError)?;
+        self.client.post(url).json(&ans).send().await?;
         Ok(())
+    }
+    pub async fn send_message_group(&self, text: &str) -> anyhow::Result<()> {
+        let method = "sendMessage";
+        let url = format!("{}{}", self.api_url, method);
+        let ans = ForwardMessage::new(self.group, text.to_owned());
+        self.client.post(url).json(&ans).send().await?;
+        Ok(())
+    }
+    pub async fn send_message_repl(&self, chat_id: i64, text: &str) -> anyhow::Result<()> {
+        let method = "sendMessage";
+        let url = format!("{}{}", self.api_url, method);
+        let ans = ForwardMessage::new(chat_id, text.to_owned());
+        self.client.post(url).json(&ans).send().await?;
+        Ok(())
+    }
+    pub async fn get_file(&self, file_id: &str) -> anyhow::Result<String> {
+        let method = "getFile";
+        let url = format!("{}{}", self.api_url, method);
+        let file = crate::models::telegram::update::File {
+            file_id: file_id.to_owned(),
+            file_path: None,
+        };
+        let response: crate::models::telegram::update::FileResponse = self
+            .client
+            .post(&url)
+            .json(&file)
+            .send()
+            .await?
+            .json()
+            .await?;
+        response
+            .result
+            .file_path
+            .ok_or(anyhow::Error::msg("error getting file"))
     }
 }
 

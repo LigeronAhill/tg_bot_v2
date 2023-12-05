@@ -24,3 +24,4 @@ chrono = {version = "0.4", features = ["serde"]}
 bson = {version = "2.7", features = ["chrono-0_4", "serde_with", "uuid-1"]}
 uuid = {version = "1.5", features = ["serde", "v4", "macro-diagnostics"]}
 tower = {version = "0.4", features = ["util"]}
+calamine = "0.22.1"
