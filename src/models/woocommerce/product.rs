@@ -20,7 +20,13 @@ pub struct WooProductCreate {
     pub categories: Vec<CategoryCreate>,
     pub attributes: Vec<AttributesProperties>,
     pub default_attributes: Vec<VariationProperties>,
-    pub meta_data: Vec<MetaDataProperties>,
+    pub meta_data: Vec<MetaDataCreate>,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MetaDataCreate {
+    // id: i64,
+    pub key: String,
+    pub value: String,
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CategoryCreate {
@@ -72,8 +78,15 @@ impl WooProductCreate {
             true => ShippingClass::Small,
             false => ShippingClass::Large,
         };
+
+        let mut min_quantity = 1.0;
+        let mut quantity_step = 1.0;
+
         let category_path: Vec<&str> = product.path_name.split('/').collect();
         let parent_cat = category_path[0];
+        if parent_cat == "Ковровые покрытия" {
+            quantity_step = 0.1
+        }
         let parent_id = state
             .storage
             .category_id(parent_cat.to_owned())
@@ -124,6 +137,17 @@ impl WooProductCreate {
                         _ => attribute_from_ms.value.as_str().unwrap().to_string(),
                     };
                     let id = state.storage.attribute_id(&attribute_from_ms.name).await;
+                    if attribute_from_ms.clone().name.as_str() == "Площадь упаковки, м2"
+                    {
+                        quantity_step = opt.parse().unwrap_or_default();
+                        min_quantity = opt.parse().unwrap_or_default();
+                    }
+                    if attribute_from_ms.clone().name.as_str() == "Ширина рулона, м" {
+                        quantity_step = 0.1;
+                        let c = opt.clone();
+                        let w: Vec<&str> = c.split_whitespace().collect();
+                        min_quantity = w[0].parse().unwrap_or(4.0);
+                    }
                     let attr = AttributesProperties {
                         id,
                         name: Some(attribute_from_ms.name),
@@ -145,6 +169,13 @@ impl WooProductCreate {
             for char in &characteristics {
                 options.push(char.option.clone())
             }
+
+            if characteristics[0].clone().name.as_str() == "Ширина рулона, м" {
+                quantity_step = 0.1;
+                let c = characteristics[0].clone().option.clone();
+                let w: Vec<&str> = c.split_whitespace().collect();
+                min_quantity = w[0].parse().unwrap_or(4.0);
+            }
             let var_attr = AttributesProperties {
                 id: Some(characteristics[0].id),
                 name: Some(characteristics[0].name.clone()),
@@ -156,11 +187,6 @@ impl WooProductCreate {
             attributes.push(var_attr);
             default_attributes.push(characteristics[0].clone());
         }
-        // let pt = category_path[0];
-        // let mdp = match pt {
-        //     "Ковровая плитка" => {}
-        //     _ => {}
-        // };
         let catalog_visibility = match product.archived {
             true => Visibility::Hidden,
             false => Visibility::Visible,
@@ -169,6 +195,16 @@ impl WooProductCreate {
             true => ProductStatus::Private,
             false => ProductStatus::Publish,
         };
+
+        let meta_data_step = MetaDataCreate {
+            key: "_alg_wc_pq_step".to_string(),
+            value: format!("{quantity_step}"),
+        };
+        let meta_data_min = MetaDataCreate {
+            key: "_alg_wc_pq_min".to_string(),
+            value: format!("{min_quantity}"),
+        };
+        let meta_data = vec![meta_data_min, meta_data_step];
         Ok(Self {
             name: product.name,
             product_type,
@@ -185,7 +221,7 @@ impl WooProductCreate {
             categories,
             attributes,
             default_attributes,
-            meta_data: vec![],
+            meta_data,
         })
     }
 }

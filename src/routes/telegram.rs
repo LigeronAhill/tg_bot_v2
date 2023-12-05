@@ -26,9 +26,15 @@ pub async fn sync_events(state: AppState) -> Result<String> {
             continue;
         } else {
             match event.action {
-                Action::CREATE => state.woo_client.create_product(&state, product).await?,
-                Action::UPDATE => state.woo_client.update_product(&state, product).await?,
-                Action::DELETE => state.woo_client.delete_product(product).await?,
+                Action::CREATE => {
+                    let _ = state.woo_client.create_product(&state, product).await?;
+                }
+                Action::UPDATE => {
+                    let _ = state.woo_client.update_product(&state, product).await?;
+                }
+                Action::DELETE => {
+                    let _ = state.woo_client.delete_product(product).await?;
+                }
             }
             state.storage.delete_event(event).await?;
             count += 1;

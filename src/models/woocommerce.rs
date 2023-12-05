@@ -1,6 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use self::product::MetaDataCreate;
+
 use super::{moy_sklad::product::ProductFromMoySklad, AppState};
 pub mod product;
 #[derive(Clone)]
@@ -69,21 +71,29 @@ impl Woo {
         &self,
         state: &AppState,
         product: ProductFromMoySklad,
-    ) -> Result<()> {
-        let prod = product::WooProductCreate::from_ms(state, product).await?;
-        self.client
+    ) -> Result<i64> {
+        let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
+        let response = self
+            .client
             .post("https://safira.club/wp-json/wc/v3/products")
             .basic_auth(self.client_key(), Some(self.client_secret()))
             .json(&prod)
             .send()
+            .await?
+            .json::<serde_json::Value>()
             .await?;
-        Ok(())
+        let id_value = response.get("id").ok_or(anyhow::Error::msg("no id!!!"))?;
+        let id = id_value.as_i64().ok_or(anyhow::Error::msg("wrong id!"))?;
+        if product.variants_count != 0 {
+            self.update_variations(id).await?
+        }
+        Ok(id)
     }
     pub async fn update_product(
         &self,
         state: &AppState,
         product: ProductFromMoySklad,
-    ) -> Result<()> {
+    ) -> Result<i64> {
         let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
         let Some(sku) = product.article.clone() else {
             return Err(anyhow::Error::msg("NO SKU!!!"));
@@ -97,13 +107,21 @@ impl Woo {
                     .json(&prod)
                     .send()
                     .await?;
+                if product.variants_count != 0 {
+                    self.update_variations(id).await?
+                }
+                Ok(id)
             }
-            Err(_) => self.create_product(state, product.clone()).await?,
+            Err(_) => {
+                let id = self.create_product(state, product.clone()).await?;
+                if product.variants_count != 0 {
+                    self.update_variations(id).await?
+                }
+                Ok(id)
+            }
         }
-
-        Ok(())
     }
-    pub async fn delete_product(&self, product: ProductFromMoySklad) -> Result<()> {
+    pub async fn delete_product(&self, product: ProductFromMoySklad) -> Result<i64> {
         let Some(sku) = product.article else {
             return Err(anyhow::Error::msg("NO SKU!!!"));
         };
@@ -114,7 +132,7 @@ impl Woo {
             .basic_auth(self.client_key(), Some(self.client_secret()))
             .send()
             .await?;
-        Ok(())
+        Ok(id)
     }
 
     async fn create_category(&self, category_name: &str, parent_id: i64) -> Result<i64> {
@@ -148,6 +166,97 @@ impl Woo {
             Ok(vec_id[0]["id"].as_i64().unwrap())
         }
     }
+    async fn get_variations(&self, id: i64) -> Result<Vec<VariationResponse>> {
+        let url = format!("https://safira.club//wp-json/wc/v3/products/{id}/variations");
+        let variations: Vec<VariationResponse> = self
+            .client
+            .get(&url)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(variations)
+    }
+
+    async fn update_variations(&self, id: i64) -> Result<()> {
+        let variations = self.get_variations(id).await?;
+
+        for variation in &variations {
+            let url = format!(
+                "https://safira.club//wp-json/wc/v3/products/{}/variations/{}",
+                id, variation.id
+            );
+            let mut min_quantity = 1.0;
+            let mut quantity_step = 1.0;
+            let mut meta_data = vec![];
+            let attribute = variation.attributes[0].clone();
+            if attribute.name.as_str() == "Ширина рулона, м" {
+                quantity_step = 0.1;
+                let c = attribute.option.clone();
+                let w: Vec<&str> = c.split_whitespace().collect();
+                min_quantity = w[0].parse().unwrap_or(4.0);
+                let meta_data_step = MetaDataCreate {
+                    key: "_alg_wc_pq_step".to_string(),
+                    value: format!("{quantity_step}"),
+                };
+                let meta_data_min = MetaDataCreate {
+                    key: "_alg_wc_pq_min".to_string(),
+                    value: format!("{min_quantity}"),
+                };
+                meta_data.push(meta_data_min);
+                meta_data.push(meta_data_step);
+            } else if attribute.name.as_str() == "Площадь упаковки, м2" {
+                let c = attribute.option;
+                quantity_step = c.parse().unwrap_or_default();
+                min_quantity = c.parse().unwrap_or_default();
+                let meta_data_step = MetaDataCreate {
+                    key: "_alg_wc_pq_step".to_string(),
+                    value: format!("{quantity_step}"),
+                };
+                let meta_data_min = MetaDataCreate {
+                    key: "_alg_wc_pq_min".to_string(),
+                    value: format!("{min_quantity}"),
+                };
+                meta_data.push(meta_data_min);
+                meta_data.push(meta_data_step);
+            } else {
+                let meta_data_step = MetaDataCreate {
+                    key: "_alg_wc_pq_step".to_string(),
+                    value: format!("{quantity_step}"),
+                };
+                let meta_data_min = MetaDataCreate {
+                    key: "_alg_wc_pq_min".to_string(),
+                    value: format!("{min_quantity}"),
+                };
+                meta_data.push(meta_data_min);
+                meta_data.push(meta_data_step);
+            }
+            let req = VariationUpdateRequest { meta_data };
+            self.client
+                .put(&url)
+                .basic_auth(self.client_key(), Some(self.client_secret()))
+                .json(&req)
+                .send()
+                .await?;
+        }
+        Ok(())
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VariationUpdateRequest {
+    pub meta_data: Vec<MetaDataCreate>,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VariationResponse {
+    pub id: i64,
+    pub attributes: Vec<VariationAttribute>,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VariationAttribute {
+    pub id: i64,
+    pub name: String,
+    pub option: String,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CategoryToCreate {
