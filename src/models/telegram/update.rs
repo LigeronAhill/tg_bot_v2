@@ -5,7 +5,7 @@ use crate::{
     routes::telegram::{clear_events, sync_events},
 };
 
-use self::xl::cl_stock_update;
+use self::xl::stock_update;
 
 pub mod xl;
 
@@ -27,9 +27,7 @@ impl Update {
                             state.bot.token(),
                             path
                         );
-                        if name.to_lowercase().contains("carpetland") {
-                            cl_stock_update(state, &uri).await?;
-                        }
+                        stock_update(state, &uri, &name).await?;
                     }
                     Ok(())
                 }

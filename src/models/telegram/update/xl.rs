@@ -4,7 +4,7 @@ use calamine::{open_workbook_from_rs, Reader, Xlsx};
 
 use crate::models::AppState;
 
-pub async fn cl_stock_update(state: &AppState, uri: &str) -> anyhow::Result<()> {
+pub async fn stock_update(state: &AppState, uri: &str, _name: &str) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let response: Vec<u8> = client.get(uri).send().await?.bytes().await?.to_vec();
     let cursor = Cursor::new(response);
