@@ -73,6 +73,7 @@ impl Woo {
         product: ProductFromMoySklad,
     ) -> Result<i64> {
         let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
+        let uri = product.meta.href.unwrap();
         let response = self
             .client
             .post("https://safira.club/wp-json/wc/v3/products")
@@ -87,6 +88,7 @@ impl Woo {
         if product.variants_count != 0 {
             self.update_variations(id).await?
         }
+        state.ms_client.update_external_code(&uri, id).await?;
         Ok(id)
     }
     pub async fn update_product(
@@ -95,37 +97,22 @@ impl Woo {
         product: ProductFromMoySklad,
     ) -> Result<i64> {
         let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
-        let Some(sku) = product.article.clone() else {
-            return Err(anyhow::Error::msg("NO SKU!!!"));
-        };
-        match self.get_woo_id(&sku).await {
-            Ok(id) => {
-                let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
-                self.client
-                    .put(&url)
-                    .basic_auth(self.client_key(), Some(self.client_secret()))
-                    .json(&prod)
-                    .send()
-                    .await?;
-                if product.variants_count != 0 {
-                    self.update_variations(id).await?
-                }
-                Ok(id)
-            }
-            Err(_) => {
-                let id = self.create_product(state, product.clone()).await?;
-                if product.variants_count != 0 {
-                    self.update_variations(id).await?
-                }
-                Ok(id)
-            }
+        let id: i64 = product.external_code.parse()?;
+        let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
+        self.client
+            .put(&url)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .json(&prod)
+            .send()
+            .await?;
+        if product.variants_count != 0 {
+            self.update_variations(id).await?;
         }
+        Ok(id)
     }
+
     pub async fn delete_product(&self, product: ProductFromMoySklad) -> Result<i64> {
-        let Some(sku) = product.article else {
-            return Err(anyhow::Error::msg("NO SKU!!!"));
-        };
-        let id = self.get_woo_id(&sku).await?;
+        let id: i64 = product.external_code.parse()?;
         let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
         self.client
             .delete(&url)
@@ -135,7 +122,7 @@ impl Woo {
         Ok(id)
     }
 
-    async fn create_category(&self, category_name: &str, parent_id: i64) -> Result<i64> {
+    pub async fn create_category(&self, category_name: &str, parent_id: i64) -> Result<i64> {
         let params = CategoryToCreate {
             name: category_name.to_owned(),
             parent: parent_id,
@@ -150,6 +137,29 @@ impl Woo {
         let value: serde_json::Value = response.json().await?;
         let id = value["id"].as_i64().unwrap();
         Ok(id)
+    }
+    pub async fn update_category(&self, id: i64, name: &str, parent_id: i64) -> Result<()> {
+        let params = CategoryToCreate {
+            name: name.to_owned(),
+            parent: parent_id,
+        };
+        let url = format!("https://safira.club/wp-json/wc/v3/products/categories/{id}");
+        self.client
+            .put(&url)
+            .json(&params)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?;
+        Ok(())
+    }
+    pub async fn delete_category(&self, id: i64) -> Result<()> {
+        let url = format!("https://safira.club/wp-json/wc/v3/products/categories/{id}");
+        self.client
+            .delete(&url)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?;
+        Ok(())
     }
     pub async fn get_woo_id(&self, sku: &String) -> Result<i64> {
         let response = self

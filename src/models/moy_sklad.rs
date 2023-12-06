@@ -56,7 +56,7 @@ impl MoySklad {
         let result = response.rows;
         Ok(result)
     }
-    pub async fn retrieve_product(&self, uri: &String) -> Result<ProductFromMoySklad> {
+    pub async fn retrieve_product(&self, uri: &str) -> Result<ProductFromMoySklad> {
         let ms_product: ProductFromMoySklad = self
             .client
             .get(uri)
@@ -99,6 +99,90 @@ impl MoySklad {
             result.push(VariationProperties { id, name, option })
         }
         Ok(result)
+    }
+    pub async fn update_external_code(&self, url: &str, woo_id: i64) -> anyhow::Result<()> {
+        let external_code = woo_id.to_string();
+        let mut update = std::collections::HashMap::new();
+        update.insert("externalCode", &external_code);
+        self.client
+            .put(url)
+            .bearer_auth(self.token())
+            .json(&update)
+            .send()
+            .await?;
+        Ok(())
+    }
+    pub async fn get_category_id(&self, product_uri: &str) -> anyhow::Result<i64> {
+        let response: serde_json::Value = self
+            .client
+            .get(product_uri)
+            .bearer_auth(self.token())
+            .send()
+            .await?
+            .json()
+            .await?;
+        let category_url = response["productFolder"]["meta"]["href"]
+            .as_str()
+            .ok_or(anyhow::Error::msg("can't parse parent url"))?;
+        let category_response: serde_json::Value = self
+            .client
+            .get(category_url)
+            .bearer_auth(self.token())
+            .send()
+            .await?
+            .json()
+            .await?;
+        category_response["externalCode"]
+            .as_i64()
+            .ok_or(anyhow::Error::msg("can't parse parent id"))
+    }
+    pub async fn get_parent_category_id(&self, category_uri: &str) -> anyhow::Result<i64> {
+        let response: serde_json::Value = self
+            .client
+            .get(category_uri)
+            .bearer_auth(self.token())
+            .send()
+            .await?
+            .json()
+            .await?;
+        let parent_url = response["productFolder"]["meta"]["href"]
+            .as_str()
+            .ok_or(anyhow::Error::msg("can't parse parent url"))?;
+        let parent_response: serde_json::Value = self
+            .client
+            .get(parent_url)
+            .bearer_auth(self.token())
+            .send()
+            .await?
+            .json()
+            .await?;
+        let result = parent_response["externalCode"]
+            .as_str()
+            .ok_or(anyhow::Error::msg("can't parse parent id string"))?
+            .parse()?;
+        Ok(result)
+    }
+
+    pub async fn retrieve_category(&self, uri: &str) -> Result<(i64, String, i64)> {
+        let response: serde_json::Value = self
+            .client
+            .get(uri)
+            .bearer_auth(self.token())
+            .send()
+            .await?
+            .json()
+            .await?;
+        let id = response["externalCode"]
+            .as_str()
+            .ok_or(anyhow::Error::msg("can't parse id string"))?
+            .parse()
+            .unwrap_or(0);
+        let name = response["name"]
+            .as_str()
+            .ok_or(anyhow::Error::msg("can't find category name"))?
+            .to_string();
+        let parent_id = self.get_parent_category_id(uri).await?;
+        Ok((id, name, parent_id))
     }
 }
 
@@ -155,9 +239,24 @@ pub struct Meta {
 pub struct Event {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub meta: Meta,
+    pub meta: EventMeta,
     pub action: Action,
-    // pub account_id: String,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventMeta {
+    #[serde(rename = "type")]
+    pub event_type: EventType,
+    pub href: String,
+}
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EventType {
+    #[default]
+    Product,
+    Productfolder,
+    Variant,
+    String(String),
 }
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Action {

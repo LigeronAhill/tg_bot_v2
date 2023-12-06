@@ -83,27 +83,18 @@ impl WooProductCreate {
         let mut quantity_step = 1.0;
 
         let category_path: Vec<&str> = product.path_name.split('/').collect();
-        let parent_cat = category_path[0];
-        if parent_cat == "Ковровые покрытия" {
+        let root_cat = category_path[0];
+        if root_cat == "Ковровые покрытия" {
             quantity_step = 0.1
         }
-        let parent_id = state
-            .storage
-            .category_id(parent_cat.to_owned())
-            .await
-            .unwrap();
-        let category_name = category_path[category_path.len() - 1];
+        let product_uri = product
+            .clone()
+            .meta
+            .href
+            .ok_or(anyhow::Error::msg("can't parse product url"))?;
+        let cat_id = state.ms_client.get_category_id(&product_uri).await?;
         let mut categories = Vec::new();
-        let id = match state.storage.category_id(category_name.to_string()).await {
-            Some(id) => id,
-            None => {
-                state
-                    .woo_client
-                    .create_category(category_name, parent_id)
-                    .await?
-            }
-        };
-        categories.push(CategoryCreate { id });
+        categories.push(CategoryCreate { id: cat_id });
         let mut attributes = match product.attributes.clone() {
             Some(attributes_from_ms) => {
                 let mut attrs: Vec<AttributesProperties> = vec![];

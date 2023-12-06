@@ -45,6 +45,7 @@ async fn axum(
     let router = Router::new()
         .route("/health", get(health))
         .route("/api/v1/telegram", post(telegram))
+        .route("/api/v1/syncproducts", get(sync_products))
         .route("/api/v1/mswebhook", post(ms_webhook))
         .route("/api/v1/woowebhook", post(woo_webhook))
         .route("/api/v1/wooproduct", post(woo_product))

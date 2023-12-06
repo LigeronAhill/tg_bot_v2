@@ -8,10 +8,17 @@ use axum::{
     Json,
 };
 use serde_json::Value;
+pub mod sync;
 pub mod telegram;
 pub mod ymarket;
 pub async fn health() -> StatusCode {
     StatusCode::OK
+}
+pub async fn sync_products(State(state): State<AppState>) -> Result<Json<String>> {
+    let result = sync::sync_categories(&state)
+        .await
+        .map_err(|e| MyError::Static(e.to_string()))?;
+    Ok(Json(result))
 }
 pub async fn telegram(
     State(state): State<AppState>,
