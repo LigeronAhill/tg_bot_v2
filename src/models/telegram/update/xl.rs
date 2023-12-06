@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use calamine::{open_workbook_from_rs, RangeDeserializerBuilder, Reader, Xlsx};
+use calamine::{open_workbook_from_rs, Reader, Xlsx};
 use serde::{Deserialize, Serialize};
 
 use crate::models::AppState;
@@ -13,15 +13,41 @@ pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Re
     let sheets = workbook.sheet_names().to_owned();
     let range = workbook.worksheet_range(&sheets[0]).unwrap()?;
     let mut result = vec![];
-    let iter = RangeDeserializerBuilder::new().from_range::<_, RawCarpetland>(&range)?;
     let test = match name.contains("Carpetland") {
         true => "passed",
         false => "failed",
     };
-    for row in iter {
-        match row {
-            Ok(row) => result.push(row),
-            Err(_) => continue,
+    for (i, row) in range.rows().enumerate() {
+        if i == 0 {
+            continue;
+        } else {
+            let Some(brand) = row[0].get_string() else {
+                continue;
+            };
+            let Some(collection) = row[1].get_string() else {
+                continue;
+            };
+            let Some(article) = row[2].get_string() else {
+                continue;
+            };
+            let Some(width) = row[3].get_string() else {
+                continue;
+            };
+            let Some(free_m) = row[4].get_string() else {
+                continue;
+            };
+            let Some(free_sqm) = row[5].get_string() else {
+                continue;
+            };
+            let r = RawCarpetland {
+                brand: brand.to_string(),
+                collection: collection.to_string(),
+                article: article.to_string(),
+                width: width.to_string(),
+                free_m: free_m.to_string(),
+                free_sqm: free_sqm.to_string(),
+            };
+            result.push(r);
         }
     }
     let text = format!("file: {}\ntest: {}\n{:#?}", name, test, result[2]);
