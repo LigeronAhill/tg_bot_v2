@@ -1,12 +1,13 @@
-use std::io::Cursor;
-
-use calamine::{open_workbook_from_rs, Reader, Xlsx};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     models::AppState,
     routes::telegram::{clear_events, sync_events},
 };
+
+use self::xl::cl_stock_update;
+
+pub mod xl;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Update {
@@ -18,21 +19,23 @@ impl Update {
         match self.message.to_owned() {
             Some(message) => match message.document {
                 Some(document) => {
-                    let file_id = document.file_id;
-                    // ----- parse file_name!!!!!!!!!!!!!---------------
-                    let path = state.bot.get_file(&file_id).await?;
-                    let uri = format!(
-                        "https://api.telegram.org/file/bot{}/{}",
-                        state.bot.token(),
-                        path
-                    );
-                    let client = reqwest::Client::new();
-                    let response: Vec<u8> = client.get(&uri).send().await?.bytes().await?.to_vec();
-                    let cursor = Cursor::new(response);
-                    let workbook: Xlsx<_> = open_workbook_from_rs(cursor).unwrap();
-                    let sheets = workbook.sheet_names().to_owned();
-                    state.bot.send_message_admin(&sheets[0]).await?;
-                    Ok(())
+                    let file_name = document.file_name.clone();
+                    match file_name {
+                        Some(name) => {
+                            let file_id = document.file_id;
+                            let path = state.bot.get_file(&file_id).await?;
+                            let uri = format!(
+                                "https://api.telegram.org/file/bot{}/{}",
+                                state.bot.token(),
+                                path
+                            );
+                            if name.contains("Склад Carpetland") {
+                                cl_stock_update(&state, &uri).await?;
+                            }
+                            Ok(())
+                        }
+                        None => Ok(()),
+                    }
                 }
                 None => match message.text {
                     Some(text) => match text.as_str() {
