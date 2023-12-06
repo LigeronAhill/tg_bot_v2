@@ -1,11 +1,13 @@
+use std::time::Duration;
+
 use axum::routing::{delete, get, post, put};
 use axum::Router;
-
 use db::Storage;
 use models::market::MarketClient;
 use models::moy_sklad::MoySklad;
 use models::woocommerce::Woo;
 use mongodb::Database;
+use routes::telegram::sync_events;
 use shuttle_secrets::SecretStore;
 
 pub mod db;
@@ -14,6 +16,7 @@ pub mod models;
 pub mod routes;
 pub mod tg;
 use routes::*;
+use tokio::time::sleep;
 
 #[shuttle_runtime::main]
 async fn axum(
@@ -41,6 +44,7 @@ async fn axum(
     let woo_client = Woo::new(woo_token_1, woo_token_2).await;
     let market_client = MarketClient::new(&market_token, &yandex_token);
     let app_state = models::AppState::new(storage, bot, ms_client, woo_client, market_client);
+    let state = app_state.clone();
 
     let router = Router::new()
         .route("/health", get(health))
@@ -71,6 +75,13 @@ async fn axum(
         .route("/api/v1/update/:id", put(update_product))
         .route("/api/v1/delete/:id", delete(delete_product))
         .with_state(app_state);
+
+    tokio::spawn(async move {
+        loop {
+            let _ = sync_events(state.clone()).await;
+            sleep(Duration::from_millis(60000)).await;
+        }
+    });
 
     Ok(router.into())
 }
