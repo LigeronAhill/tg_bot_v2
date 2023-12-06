@@ -16,10 +16,10 @@ pub async fn sync_categories(state: &AppState) -> anyhow::Result<String> {
 
     for category in &response.rows {
         if let Some(woo_id) = state.storage.category_id(category.name.clone()).await {
-            update_external_code(&state, &category.meta.href, woo_id).await?;
+            update_external_code(state, &category.meta.href, woo_id).await?;
         }
     }
-    return Ok(String::from("Done"));
+    Ok(String::from("Done"))
 }
 pub async fn sync_products(state: &AppState) -> anyhow::Result<String> {
     let mut next_url = "https://api.moysklad.ru/api/remap/1.2/entity/product".to_string();
@@ -38,7 +38,7 @@ pub async fn sync_products(state: &AppState) -> anyhow::Result<String> {
         for product in &response.rows {
             if let Some(sku) = &product.article {
                 if let Ok(woo_id) = state.woo_client.get_woo_id(sku).await {
-                    update_external_code(&state, &product.meta.href, woo_id).await?;
+                    update_external_code(state, &product.meta.href, woo_id).await?;
                 }
             }
         }

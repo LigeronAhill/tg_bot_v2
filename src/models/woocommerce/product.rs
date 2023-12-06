@@ -93,8 +93,7 @@ impl WooProductCreate {
             .href
             .ok_or(anyhow::Error::msg("can't parse product url"))?;
         let cat_id = state.ms_client.get_category_id(&product_uri).await?;
-        let mut categories = Vec::new();
-        categories.push(CategoryCreate { id: cat_id });
+        let categories = vec![CategoryCreate { id: cat_id }];
         let mut attributes = match product.attributes.clone() {
             Some(attributes_from_ms) => {
                 let mut attrs: Vec<AttributesProperties> = vec![];
