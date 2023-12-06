@@ -19,23 +19,19 @@ impl Update {
         match self.message.to_owned() {
             Some(message) => match message.document {
                 Some(document) => {
-                    let file_name = document.file_name.clone();
-                    match file_name {
-                        Some(name) => {
-                            let file_id = document.file_id;
-                            let path = state.bot.get_file(&file_id).await?;
-                            let uri = format!(
-                                "https://api.telegram.org/file/bot{}/{}",
-                                state.bot.token(),
-                                path
-                            );
-                            if name.contains("Carpetland") {
-                                cl_stock_update(&state, &uri).await?;
-                            }
-                            Ok(())
+                    if let Some(name) = document.file_name.clone() {
+                        let file_id = document.file_id;
+                        let path = state.bot.get_file(&file_id).await?;
+                        let uri = format!(
+                            "https://api.telegram.org/file/bot{}/{}",
+                            state.bot.token(),
+                            path
+                        );
+                        if name.to_lowercase().contains("carpetland") {
+                            cl_stock_update(state, &uri).await?;
                         }
-                        None => Ok(()),
                     }
+                    Ok(())
                 }
                 None => match message.text {
                     Some(text) => match text.as_str() {
