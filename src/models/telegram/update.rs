@@ -29,7 +29,7 @@ impl Update {
                                 state.bot.token(),
                                 path
                             );
-                            if name.contains("Склад Carpetland") {
+                            if name.contains("Carpetland") {
                                 cl_stock_update(&state, &uri).await?;
                             }
                             Ok(())

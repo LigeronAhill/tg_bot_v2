@@ -10,7 +10,7 @@ pub async fn cl_stock_update(state: &AppState, uri: &str) -> anyhow::Result<()> 
     let cursor = Cursor::new(response);
     let mut workbook: Xlsx<_> = open_workbook_from_rs(cursor)?;
     let sheets = workbook.sheet_names().to_owned();
-    let mut text = String::new();
+    let mut text = String::from("failed");
     if let Some(Ok(range)) = workbook.worksheet_range(&sheets[0]) {
         for row in range.rows() {
             text.push_str(&format!("row = {:?}, row[0] = {:?}\n", row, row[0]));
