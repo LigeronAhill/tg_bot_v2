@@ -21,7 +21,6 @@ impl Update {
                 Some(document) => {
                     if let Some(name) = document.file_name.clone() {
                         let file_id = document.file_id;
-                        state.bot.send_message_admin(&file_id).await?;
                         let path = state.bot.get_file(&file_id).await?;
                         let uri = format!(
                             "https://api.telegram.org/file/bot{}/{}",
