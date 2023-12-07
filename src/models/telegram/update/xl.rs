@@ -1,9 +1,8 @@
 use std::{collections::HashMap, io::Cursor};
 
 use calamine::{open_workbook_from_rs, Reader, Xlsx};
-use serde::{Deserialize, Serialize};
 
-use crate::models::AppState;
+use crate::models::{woocommerce::product::ProductType, AppState};
 
 pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
@@ -76,8 +75,43 @@ async fn carpetland_process(state: &AppState, cursor: Cursor<Vec<u8>>) -> anyhow
             stock_map.insert(sku, stock);
         }
     }
-    for (sku, _stock) in stock_map {
-        let _id = state.woo_client.get_woo_id(&sku).await?;
+    for (sku, stock) in stock_map {
+        let Ok(id) = state.woo_client.get_woo_id(&sku).await else {
+            continue;
+        };
+        let Ok(product) = state.woo_client.retrieve_product(id).await else {
+            continue;
+        };
+        let Some(prod_type) = product.product_type else {
+            continue;
+        };
+        let url = match prod_type {
+            ProductType::Simple => format!("https://safira.club/wp-json/wc/v3/products/{}", id),
+            _ => {
+                let mut product_sku_vec = sku.split('_').collect::<Vec<&str>>();
+                product_sku_vec.pop();
+                let sku = product_sku_vec.join("_");
+                let product_id = state.woo_client.get_woo_id(&sku).await?;
+                format!(
+                    "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
+                    product_id, id
+                )
+            }
+        };
+        let stock_val: f64 = format!("{:.2}", stock).parse()?;
+        let mut update_map = HashMap::new();
+        update_map.insert("stock_quantity", stock_val);
+        state
+            .woo_client
+            .client()
+            .put(&url)
+            .basic_auth(
+                state.woo_client.client_key(),
+                Some(state.woo_client.client_secret()),
+            )
+            .json(&update_map)
+            .send()
+            .await?;
     }
 
     Ok(())
@@ -88,13 +122,4 @@ fn capitalize_first(s: String) -> String {
         None => String::new(),
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
-}
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct RawCarpetland {
-    pub brand: String,
-    pub collection: String,
-    pub article: String,
-    pub width: i32,
-    pub free_m: f64,
-    pub free_sqm: f64,
 }

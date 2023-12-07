@@ -304,6 +304,8 @@ pub enum ProductType {
     Grouped,
     External,
     Variable,
+    Variation,
+    Undefiened(String),
 }
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
