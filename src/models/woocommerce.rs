@@ -1,9 +1,12 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use self::product::MetaDataCreate;
+use self::product::{MetaDataCreate, ProductFromWoo};
 
-use super::{moy_sklad::product::ProductFromMoySklad, AppState};
+use super::{
+    moy_sklad::product::{ProductFromMoySklad, SalePrice},
+    AppState,
+};
 pub mod product;
 #[derive(Clone)]
 pub struct Woo {
@@ -74,6 +77,7 @@ impl Woo {
     ) -> Result<i64> {
         let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
         let uri = product.meta.href.unwrap();
+        let prices = product.sale_prices;
         let response = self
             .client
             .post("https://safira.club/wp-json/wc/v3/products")
@@ -86,7 +90,7 @@ impl Woo {
         let id_value = response.get("id").ok_or(anyhow::Error::msg("no id!!!"))?;
         let id = id_value.as_i64().ok_or(anyhow::Error::msg("wrong id!"))?;
         if product.variants_count != 0 {
-            self.update_variations(id).await?
+            self.update_variations(state, id, prices).await?
         }
         state.ms_client.update_external_code(&uri, id).await?;
         Ok(id)
@@ -97,6 +101,7 @@ impl Woo {
         product: ProductFromMoySklad,
     ) -> Result<i64> {
         let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
+        let prices = product.sale_prices;
         let id: i64 = product.external_code.parse()?;
         let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
         self.client
@@ -106,7 +111,7 @@ impl Woo {
             .send()
             .await?;
         if product.variants_count != 0 {
-            self.update_variations(id).await?;
+            self.update_variations(state, id, prices).await?;
         }
         Ok(id)
     }
@@ -121,7 +126,18 @@ impl Woo {
             .await?;
         Ok(id)
     }
-
+    pub async fn retrieve_product(&self, id: i64) -> Result<ProductFromWoo> {
+        let url = format!("https://safira.club/wp-json/wc/v3/products/{id}");
+        let result = self
+            .client
+            .get(&url)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?
+            .json::<ProductFromWoo>()
+            .await?;
+        Ok(result)
+    }
     pub async fn create_category(&self, category_name: &str, parent_id: i64) -> Result<i64> {
         let params = CategoryToCreate {
             name: category_name.to_owned(),
@@ -176,7 +192,26 @@ impl Woo {
             Ok(vec_id[0]["id"].as_i64().unwrap())
         }
     }
-    async fn get_variations(&self, id: i64) -> Result<Vec<VariationResponse>> {
+    pub async fn get_variation_id(&self, product_id: i64, sku: &String) -> Result<i64> {
+        let uri = format!(
+            "https://safira.club//wp-json/wc/v3/products/{}/variations",
+            product_id
+        );
+        let response = self
+            .client
+            .get(&uri)
+            .query(&[("sku", sku)])
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?;
+        let vec_id = response.json::<Vec<serde_json::Value>>().await?;
+        if vec_id.is_empty() {
+            Err(anyhow::Error::msg("no id"))
+        } else {
+            Ok(vec_id[0]["id"].as_i64().unwrap())
+        }
+    }
+    pub async fn get_variations(&self, id: i64) -> Result<Vec<VariationResponse>> {
         let url = format!("https://safira.club//wp-json/wc/v3/products/{id}/variations");
         let variations: Vec<VariationResponse> = self
             .client
@@ -189,8 +224,53 @@ impl Woo {
         Ok(variations)
     }
 
-    async fn update_variations(&self, id: i64) -> Result<()> {
+    pub async fn update_variations(
+        &self,
+        state: &AppState,
+        id: i64,
+        prices: Option<Vec<SalePrice>>,
+    ) -> Result<()> {
         let variations = self.get_variations(id).await?;
+        let product = self.retrieve_product(id).await?;
+        let sku = product
+            .clone()
+            .sku
+            .ok_or(anyhow::Error::msg("error getting sku"))?;
+        let mut regular_price = String::from("0");
+        let mut sale_price: Option<String> = None;
+        if let Some(prices) = prices {
+            for price in prices {
+                if price.price_type.name.as_str() == "Цена продажи" {
+                    let Some(cur_url) = price.currency.meta.href else {
+                        return Err(anyhow::Error::msg("no currency!"));
+                    };
+                    let ms_curr_response = state
+                        .ms_client
+                        .client()
+                        .get(cur_url)
+                        .bearer_auth(&state.ms_client.token())
+                        .send()
+                        .await?;
+                    let curr_val: serde_json::Value = ms_curr_response.json().await?;
+                    let rate = curr_val["rate"].as_f64().unwrap();
+                    regular_price = format!("{}", (rate * price.value) / 100.0);
+                } else if price.price_type.name.as_str() == "Акция" && price.value > 0.0 {
+                    let Some(cur_url) = price.currency.meta.href else {
+                        return Err(anyhow::Error::msg("no currency!"));
+                    };
+                    let ms_curr_response = state
+                        .ms_client
+                        .client()
+                        .get(cur_url)
+                        .bearer_auth(&state.ms_client.token())
+                        .send()
+                        .await?;
+                    let curr_val: serde_json::Value = ms_curr_response.json().await?;
+                    let rate = curr_val["rate"].as_f64().unwrap();
+                    sale_price = Some(format!("{}", (rate * price.value) / 100.0));
+                }
+            }
+        }
 
         for variation in &variations {
             let url = format!(
@@ -200,12 +280,15 @@ impl Woo {
             let mut min_quantity = 1.0;
             let mut quantity_step = 1.0;
             let mut meta_data = vec![];
+            let mut sku = sku.clone();
             let attribute = variation.attributes[0].clone();
             if attribute.name.as_str() == "Ширина рулона, м" {
                 quantity_step = 0.1;
                 let c = attribute.option.clone();
                 let w: Vec<&str> = c.split_whitespace().collect();
                 min_quantity = w[0].parse().unwrap_or(4.0);
+                let w_to_sku: i32 = w[0].parse().unwrap_or(4);
+                sku = format!("{}_{}", sku, w_to_sku);
                 let meta_data_step = MetaDataCreate {
                     key: "_alg_wc_pq_step".to_string(),
                     value: format!("{quantity_step}"),
@@ -242,7 +325,12 @@ impl Woo {
                 meta_data.push(meta_data_min);
                 meta_data.push(meta_data_step);
             }
-            let req = VariationUpdateRequest { meta_data };
+            let req = VariationUpdateRequest {
+                sku,
+                regular_price: regular_price.clone(),
+                sale_price: sale_price.clone(),
+                meta_data,
+            };
             self.client
                 .put(&url)
                 .basic_auth(self.client_key(), Some(self.client_secret()))
@@ -255,6 +343,9 @@ impl Woo {
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VariationUpdateRequest {
+    pub sku: String,
+    pub regular_price: String,
+    pub sale_price: Option<String>,
     pub meta_data: Vec<MetaDataCreate>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
