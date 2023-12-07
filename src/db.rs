@@ -9,12 +9,14 @@ use mongodb::{
     options::IndexOptions,
     Collection, Database, IndexModel,
 };
+use serde::{Deserialize, Serialize};
 // use serde::{Deserialize, Serialize};
 
 pub const PRODUCT_COL: &str = "product";
 pub const EVENT_COL: &str = "event";
 pub const CATEGORIES_COL: &str = "category";
 pub const ATTRIBUTES_COL: &str = "attribute";
+pub const STOCK_COL: &str = "stock";
 
 #[derive(Clone, Debug)]
 pub struct Storage {
@@ -22,6 +24,7 @@ pub struct Storage {
     event: Collection<Event>,
     category: Collection<CategoryDB>,
     attribute: Collection<AttributeDB>,
+    stock: Collection<Stock>,
 }
 impl Storage {
     pub async fn new(db: &Database) -> Self {
@@ -30,6 +33,7 @@ impl Storage {
             event: db.collection::<Event>(EVENT_COL),
             category: db.collection::<CategoryDB>(CATEGORIES_COL),
             attribute: db.collection::<AttributeDB>(ATTRIBUTES_COL),
+            stock: db.collection::<Stock>(STOCK_COL),
         }
     }
     pub async fn name_index_create(&self) -> Result<()> {
@@ -184,4 +188,28 @@ impl Storage {
             _ => None,
         }
     }
+    pub async fn add_stock(&self, stock: Vec<Stock>) -> anyhow::Result<()> {
+        let _result = self.stock.insert_many(stock, None).await?;
+        Ok(())
+    }
+    pub async fn get_stock(&self) -> anyhow::Result<Vec<Stock>> {
+        let mut cursor = self.stock.find(None, None).await?;
+        let mut result = vec![];
+        while let Some(stock) = cursor.try_next().await? {
+            result.push(stock)
+        }
+        Ok(result)
+    }
+    pub async fn delete_stock(&self, stock: Stock) -> anyhow::Result<()> {
+        let oid = stock.id;
+        self.stock.delete_one(doc! {"_id": oid}, None).await?;
+        Ok(())
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Stock {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub sku: String,
+    pub quantity: f64,
 }

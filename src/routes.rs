@@ -1,3 +1,4 @@
+use crate::db::Stock;
 use crate::errors::{MyError, Result};
 use crate::models::moy_sklad::{Audit, Event};
 use crate::models::woocommerce::product::ProductFromWoo;
@@ -77,6 +78,15 @@ pub async fn get_products(State(app_state): State<AppState>) -> Result<Json<Vec<
     let result = app_state
         .storage
         .get_all_events()
+        .await
+        .map_err(|_| MyError::DbError)?;
+    // let result = app_state.storage.find_all_products().await?;
+    Ok(Json(result))
+}
+pub async fn get_stock(State(app_state): State<AppState>) -> Result<Json<Vec<Stock>>> {
+    let result = app_state
+        .storage
+        .get_stock()
         .await
         .map_err(|_| MyError::DbError)?;
     // let result = app_state.storage.find_all_products().await?;

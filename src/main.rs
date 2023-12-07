@@ -5,6 +5,7 @@ use axum::Router;
 use db::Storage;
 use models::market::MarketClient;
 use models::moy_sklad::MoySklad;
+use models::telegram::update::xl::stock_process;
 use models::woocommerce::Woo;
 use mongodb::Database;
 use routes::telegram::sync_events;
@@ -70,6 +71,7 @@ async fn axum(
         )
         .route("/api/v1/create", post(create_product))
         .route("/api/v1/read", get(get_products))
+        .route("/api/v1/stock", get(get_stock))
         .route("/api/v1/read/:id", get(get_product_by_id))
         .route("/api/v1/find/:name", get(get_product_by_name))
         .route("/api/v1/update/:id", put(update_product))
@@ -79,6 +81,7 @@ async fn axum(
     tokio::spawn(async move {
         loop {
             let _ = sync_events(state.clone()).await;
+            let _ = stock_process(&state).await;
             sleep(Duration::from_millis(60000)).await;
         }
     });

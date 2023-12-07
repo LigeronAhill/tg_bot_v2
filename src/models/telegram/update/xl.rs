@@ -2,7 +2,10 @@ use std::{collections::HashMap, io::Cursor};
 
 use calamine::{open_workbook_from_rs, Reader, Xlsx};
 
-use crate::models::{woocommerce::product::ProductType, AppState};
+use crate::{
+    db::Stock,
+    models::{woocommerce::product::ProductType, AppState},
+};
 
 pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
@@ -10,16 +13,71 @@ pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Re
     let cursor = Cursor::new(response);
 
     if name.contains("Carpetland") || name.contains("Склад КОНТРАКТ") {
-        carpetland_process(state, cursor.clone()).await?;
+        carpetland_pre_process(state, cursor.clone()).await?;
     }
 
     Ok(())
 }
-async fn carpetland_process(state: &AppState, cursor: Cursor<Vec<u8>>) -> anyhow::Result<()> {
+pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
+    let stock = state.storage.get_stock().await?;
+    for s in stock {
+        let Ok(id) = state.woo_client.get_woo_id(&s.sku).await else {
+            state.storage.delete_stock(s).await?;
+            continue;
+        };
+        let Ok(product) = state.woo_client.retrieve_product(id).await else {
+            state.storage.delete_stock(s).await?;
+            continue;
+        };
+        let Some(prod_type) = product.product_type else {
+            state.storage.delete_stock(s).await?;
+            continue;
+        };
+        let url = match prod_type {
+            ProductType::Simple => format!("https://safira.club/wp-json/wc/v3/products/{}", id),
+            _ => {
+                let mut product_sku_vec = s.sku.split('_').collect::<Vec<&str>>();
+                product_sku_vec.pop();
+                let sku = product_sku_vec.join("_");
+                let product_id = state.woo_client.get_woo_id(&sku).await?;
+                format!(
+                    "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
+                    product_id, id
+                )
+            }
+        };
+        let stock_val: f64 = format!("{:.2}", s.quantity).parse()?;
+        let mut update_map = HashMap::new();
+        update_map.insert("stock_quantity", stock_val);
+        state
+            .woo_client
+            .client()
+            .put(&url)
+            .basic_auth(
+                state.woo_client.client_key(),
+                Some(state.woo_client.client_secret()),
+            )
+            .json(&update_map)
+            .send()
+            .await?;
+        state.storage.delete_stock(s).await?;
+    }
+
+    Ok(())
+}
+fn capitalize_first(s: String) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+async fn carpetland_pre_process(state: &AppState, cursor: Cursor<Vec<u8>>) -> anyhow::Result<()> {
     let mut workbook: Xlsx<_> = open_workbook_from_rs(cursor)?;
     let sheets = workbook.sheet_names().to_owned();
     let range = workbook.worksheet_range(&sheets[0]).unwrap()?;
     let mut stock_map = HashMap::new();
+    let mut result = vec![];
     for (i, r) in range.rows().enumerate() {
         if i == 0 {
             continue;
@@ -76,50 +134,12 @@ async fn carpetland_process(state: &AppState, cursor: Cursor<Vec<u8>>) -> anyhow
         }
     }
     for (sku, stock) in stock_map {
-        let Ok(id) = state.woo_client.get_woo_id(&sku).await else {
-            continue;
-        };
-        let Ok(product) = state.woo_client.retrieve_product(id).await else {
-            continue;
-        };
-        let Some(prod_type) = product.product_type else {
-            continue;
-        };
-        let url = match prod_type {
-            ProductType::Simple => format!("https://safira.club/wp-json/wc/v3/products/{}", id),
-            _ => {
-                let mut product_sku_vec = sku.split('_').collect::<Vec<&str>>();
-                product_sku_vec.pop();
-                let sku = product_sku_vec.join("_");
-                let product_id = state.woo_client.get_woo_id(&sku).await?;
-                format!(
-                    "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
-                    product_id, id
-                )
-            }
-        };
-        let stock_val: f64 = format!("{:.2}", stock).parse()?;
-        let mut update_map = HashMap::new();
-        update_map.insert("stock_quantity", stock_val);
-        state
-            .woo_client
-            .client()
-            .put(&url)
-            .basic_auth(
-                state.woo_client.client_key(),
-                Some(state.woo_client.client_secret()),
-            )
-            .json(&update_map)
-            .send()
-            .await?;
+        result.push(Stock {
+            id: None,
+            sku,
+            quantity: stock,
+        })
     }
-
+    state.storage.add_stock(result).await?;
     Ok(())
-}
-fn capitalize_first(s: String) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-    }
 }
