@@ -46,7 +46,7 @@ pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
                 )
             }
         };
-        let stock_val = s.quantity as i32;
+        let stock_val = s.quantity as i64;
         let mut update_map = HashMap::new();
         update_map.insert("stock_quantity", stock_val);
         state
