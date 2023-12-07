@@ -132,9 +132,11 @@ impl MoySklad {
             .await?
             .json()
             .await?;
-        category_response["externalCode"]
-            .as_i64()
-            .ok_or(anyhow::Error::msg("can't parse parent id"))
+        let result = category_response["externalCode"]
+            .as_str()
+            .ok_or(anyhow::Error::msg("can't parse parent id string"))?
+            .parse()?;
+        Ok(result)
     }
     pub async fn get_parent_category_id(&self, category_uri: &str) -> anyhow::Result<i64> {
         let response: serde_json::Value = self
