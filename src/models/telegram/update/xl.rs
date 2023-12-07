@@ -21,46 +21,46 @@ pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Re
 pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
     let stock = state.storage.get_stock().await?;
     for s in stock {
-        let Ok(id) = state.woo_client.get_woo_id(&s.sku).await else {
-            state.storage.delete_stock(s).await?;
-            continue;
-        };
-        let Ok(product) = state.woo_client.retrieve_product(id).await else {
-            state.storage.delete_stock(s).await?;
-            continue;
-        };
-        let Some(prod_type) = product.product_type else {
-            state.storage.delete_stock(s).await?;
-            continue;
-        };
-        let url = match prod_type {
-            ProductType::Simple => format!("https://safira.club/wp-json/wc/v3/products/{}", id),
-            _ => {
-                let mut product_sku_vec = s.sku.split('_').collect::<Vec<&str>>();
-                product_sku_vec.pop();
-                let sku = product_sku_vec.join("_");
-                let product_id = state.woo_client.get_woo_id(&sku).await?;
-                format!(
-                    "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
-                    product_id, id
-                )
+        if let Ok(id) = state.woo_client.get_woo_id(&s.sku).await {
+            if let Ok(product) = state.woo_client.retrieve_product(id).await {
+                let url = match product.product_type.unwrap() {
+                    ProductType::Simple => {
+                        format!("https://safira.club/wp-json/wc/v3/products/{}", id)
+                    }
+                    _ => {
+                        let mut product_sku_vec = s.sku.split('_').collect::<Vec<&str>>();
+                        product_sku_vec.pop();
+                        let sku = product_sku_vec.join("_");
+                        let product_id = state.woo_client.get_woo_id(&sku).await?;
+                        format!(
+                            "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
+                            product_id, id
+                        )
+                    }
+                };
+                let stock_val = s.quantity as i64;
+                let mut update_map = HashMap::new();
+                update_map.insert("stock_quantity", stock_val);
+                state
+                    .woo_client
+                    .client()
+                    .put(&url)
+                    .basic_auth(
+                        state.woo_client.client_key(),
+                        Some(state.woo_client.client_secret()),
+                    )
+                    .json(&update_map)
+                    .send()
+                    .await?;
+                state.storage.delete_stock(s).await?;
+            } else {
+                println!("error getting product in processing --{}--", s.sku);
+                state.storage.delete_stock(s).await?;
             }
-        };
-        let stock_val = s.quantity as i64;
-        let mut update_map = HashMap::new();
-        update_map.insert("stock_quantity", stock_val);
-        state
-            .woo_client
-            .client()
-            .put(&url)
-            .basic_auth(
-                state.woo_client.client_key(),
-                Some(state.woo_client.client_secret()),
-            )
-            .json(&update_map)
-            .send()
-            .await?;
-        state.storage.delete_stock(s).await?;
+        } else {
+            println!("error getting id in processing --{}--", s.sku);
+            state.storage.delete_stock(s).await?;
+        }
     }
 
     Ok(())
