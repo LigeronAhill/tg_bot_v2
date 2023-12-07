@@ -5,48 +5,52 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::AppState;
 
-pub async fn stock_update(state: &AppState, uri: &str, _name: &str) -> anyhow::Result<()> {
+pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let response: Vec<u8> = client.get(uri).send().await?.bytes().await?.to_vec();
     let cursor = Cursor::new(response);
+
+    if name.contains("Carpetland") || name.contains("Склад КОНТРАКТ") {
+        carpetland_process(state, cursor.clone()).await?;
+    }
+
+    Ok(())
+}
+async fn carpetland_process(_state: &AppState, cursor: Cursor<Vec<u8>>) -> anyhow::Result<()> {
     let mut workbook: Xlsx<_> = open_workbook_from_rs(cursor)?;
     let sheets = workbook.sheet_names().to_owned();
     let range = workbook.worksheet_range(&sheets[0]).unwrap()?;
     let mut result = vec![];
-    // let test = match name.contains("Carpetland") {
-    //     true => "passed",
-    //     false => "failed",
-    // };
     for (i, row) in range.rows().enumerate() {
         if i == 0 {
             continue;
         } else {
             let brand = match row[0].get_string() {
                 Some(brand) => brand.to_string(),
-                None => format!("row {i} - 1"),
+                None => continue,
             };
             let collection = match row[1].get_string() {
                 Some(collection) => collection.to_string(),
-                None => format!("row {i} - 2"),
+                None => continue,
             };
             let article = match row[2].get_string() {
                 Some(article) => article.to_string(),
-                None => format!("row {i} - 3"),
+                None => continue,
             };
             let width = match row[3].get_string() {
                 Some(width) => match width.parse::<i32>() {
                     Ok(width) => width,
-                    Err(_) => 69,
+                    Err(_) => continue,
                 },
-                None => 1 + i as i32,
+                None => continue,
             };
             let free_m = match row[4].get_float() {
                 Some(free_m) => free_m,
-                None => 1.0 + i as f64,
+                None => continue,
             };
             let free_sqm = match row[5].get_float() {
                 Some(free_sqm) => free_sqm,
-                None => 1.0 + i as f64,
+                None => continue,
             };
             result.push(RawCarpetland {
                 brand,
@@ -58,8 +62,6 @@ pub async fn stock_update(state: &AppState, uri: &str, _name: &str) -> anyhow::R
             });
         }
     }
-    let text = format!("{:#?}", result[0]);
-    state.bot.send_message_admin(&text).await?;
     Ok(())
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
