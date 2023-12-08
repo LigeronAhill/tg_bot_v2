@@ -101,8 +101,11 @@ impl Woo {
         product: ProductFromMoySklad,
     ) -> Result<i64> {
         let prod = product::WooProductCreate::from_ms(state, product.clone()).await?;
-        let prices = product.sale_prices;
-        let id: i64 = product.external_code.parse()?;
+        let prices = product.clone().sale_prices;
+        let id: i64 = match product.external_code.parse() {
+            Ok(id) => id,
+            Err(_) => self.create_product(state, product.clone()).await?,
+        };
         let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
         self.client
             .put(&url)

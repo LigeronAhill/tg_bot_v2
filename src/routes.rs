@@ -41,16 +41,12 @@ pub async fn ms_webhook(
     Json(payload): Json<Audit>,
 ) -> Result<StatusCode> {
     state.storage.add_events(payload.events.clone()).await?;
-    let text = format!("Received {} updates", payload.events.len());
-    let _ = state.bot.send_message_admin(&text).await;
     Ok(StatusCode::OK)
 }
 pub async fn woo_product(
     State(state): State<AppState>,
     Json(payload): Json<ProductFromWoo>,
 ) -> Result<StatusCode> {
-    let text = payload.name;
-    let _ = state.bot.send_message_admin(&text).await;
     Ok(StatusCode::OK)
 }
 
