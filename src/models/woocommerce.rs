@@ -104,7 +104,18 @@ impl Woo {
         let prices = product.clone().sale_prices;
         let id: i64 = match product.external_code.parse() {
             Ok(id) => id,
-            Err(_) => self.create_product(state, product.clone()).await?,
+            Err(_) => match self
+                .get_woo_id(
+                    &product
+                        .article
+                        .clone()
+                        .ok_or(anyhow::Error::msg("no article!"))?,
+                )
+                .await
+            {
+                Ok(id) => id,
+                Err(_) => self.create_product(state, product.clone()).await?,
+            },
         };
         let url = format!("https://safira.club/wp-json/wc/v3/products/{}", id);
         self.client

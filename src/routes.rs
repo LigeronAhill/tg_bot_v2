@@ -44,8 +44,8 @@ pub async fn ms_webhook(
     Ok(StatusCode::OK)
 }
 pub async fn woo_product(
-    State(state): State<AppState>,
-    Json(payload): Json<ProductFromWoo>,
+    State(_state): State<AppState>,
+    Json(_payload): Json<ProductFromWoo>,
 ) -> Result<StatusCode> {
     Ok(StatusCode::OK)
 }
