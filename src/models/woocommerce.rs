@@ -373,7 +373,7 @@ impl Woo {
                 if let Some(variations) = product.clone().variations {
                     if variations.is_empty() {
                         result.push_str(&format!(
-                            "\n\n{}\n{}\n{}\n",
+                            "\n\nНазвание: {}\nЦена: {}\nВ наличии: {}\n",
                             product.name,
                             product.price,
                             product.stock_quantity.unwrap_or(0)
@@ -393,7 +393,8 @@ impl Woo {
                                 .json()
                                 .await?;
                             result.push_str(&format!(
-                                "\n\n{}\n{}\n{}\n",
+                                "\n\nНазвание: {}\nВариант: {}\nЦена: {}\nВ наличии: {}\n",
+                                product.name,
                                 var_response.name,
                                 var_response.price,
                                 var_response.stock_quantity.unwrap_or(0)
