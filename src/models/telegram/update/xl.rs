@@ -11,6 +11,8 @@ pub async fn stock_update(state: &AppState, uri: &str, name: &str) -> anyhow::Re
 
     if name.contains("Carpetland") || name.contains("Склад КОНТРАКТ") {
         carpetland_pre_process(state, cursor.clone()).await?;
+    } else if name.contains("Феникс") {
+        fenix_pre_process(state, cursor.clone()).await?;
     }
 
     Ok(())
@@ -181,6 +183,68 @@ async fn carpetland_pre_process(state: &AppState, cursor: Cursor<Vec<u8>>) -> an
             stock_map.insert(sku, stock);
         }
     }
+    for (sku, stock) in stock_map {
+        result.push(Stock {
+            id: None,
+            sku,
+            quantity: stock,
+        })
+    }
+    state.storage.add_stock(result).await?;
+    Ok(())
+}
+async fn fenix_pre_process(state: &AppState, cursor: Cursor<Vec<u8>>) -> anyhow::Result<()> {
+    let mut workbook: Xlsx<_> = open_workbook_from_rs(cursor)?;
+    let sheets = workbook.sheet_names().to_owned();
+    let range = workbook.worksheet_range(&sheets[0]).unwrap()?;
+    let mut stock_map = HashMap::new();
+    for (i, r) in range.rows().enumerate() {
+        if i < 2 {
+            continue;
+        } else {
+            let Some(name) = r[0].get_string() else {
+                continue;
+            };
+            let Some(quantity) = r[1].get_float() else {
+                continue;
+            };
+            let raw = name.split_whitespace().collect::<Vec<&str>>();
+            let mut result_name = vec![];
+            if name.contains("Salisbury") {
+                result_name.push(raw[0].to_string());
+                result_name.push(raw[2].to_string());
+            } else if name.contains("Cashmere") {
+                result_name.push(raw[0].to_string());
+                result_name.push(raw[1].to_string());
+                result_name.push(raw[2].to_string());
+            } else if name.contains("EMPHATIC") {
+                let lc = raw[0].to_lowercase();
+                result_name.push(capitalize_first(lc));
+                result_name.push(raw[1].to_string());
+                result_name.push(raw[2].to_string());
+                result_name.push(raw[3].to_string());
+            } else {
+                for word in raw {
+                    match word.parse::<i32>() {
+                        Ok(_) => {
+                            result_name.push(word.to_string());
+                            break;
+                        }
+                        Err(_) => {
+                            let lc = word.to_lowercase();
+                            result_name.push(capitalize_first(lc));
+                        }
+                    };
+                }
+            }
+            result_name.push("3,66".to_string());
+            let sku = result_name.join("_");
+            let stock = stock_map.get(&sku).unwrap_or(&0.0);
+            let quantity = stock + quantity;
+            stock_map.insert(sku, quantity);
+        }
+    }
+    let mut result = vec![];
     for (sku, stock) in stock_map {
         result.push(Stock {
             id: None,
