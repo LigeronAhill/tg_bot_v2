@@ -19,6 +19,10 @@ pub async fn sync_products(State(state): State<AppState>) -> Result<Json<String>
     let result = sync::sync_categories(&state)
         .await
         .map_err(|e| MyError::Static(e.to_string()))?;
+    let r2 = sync::sync_products(&state)
+        .await
+        .map_err(|e| MyError::Static(e.to_string()))?;
+    let result = format!("Categories - {result}, products - {r2}");
     Ok(Json(result))
 }
 pub async fn telegram(

@@ -71,6 +71,7 @@ async fn axum(
         )
         .route("/api/v1/create", post(create_product))
         .route("/api/v1/read", get(get_products))
+        .route("/api/v1/sync", get(sync_products))
         .route("/api/v1/stock", get(get_stock))
         .route("/api/v1/read/:id", get(get_product_by_id))
         .route("/api/v1/find/:name", get(get_product_by_name))

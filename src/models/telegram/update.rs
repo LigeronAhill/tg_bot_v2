@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     models::AppState,
-    routes::telegram::{clear_events, sync_events},
+    routes::{
+        sync::{sync_categories, sync_products},
+        telegram::{clear_events, sync_events},
+    },
 };
 
 use self::xl::stock_update;
