@@ -127,6 +127,8 @@ impl Woo {
         if product.variants_count != 0 {
             self.update_variations(state, id, prices).await?;
         }
+        let uri = product.meta.href.unwrap();
+        state.ms_client.update_external_code(&uri, id).await?;
         Ok(id)
     }
 
