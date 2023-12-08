@@ -370,35 +370,35 @@ impl Woo {
         let mut result = String::new();
         if !response.is_empty() {
             for product in &response {
-                if product.variations.is_empty() {
-                    result = format!(
-                        "{}\n\n{}\n{}\n{}\n",
-                        result,
-                        product.name,
-                        product.price,
-                        product.stock_quantity.unwrap_or(0)
-                    );
-                } else {
-                    for variation in &product.variations {
-                        let uri = format!(
-                            "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
-                            product.id, variation
-                        );
-                        let var_response: findproduct::FindProduct = self
-                            .client
-                            .get(&uri)
-                            .basic_auth(self.client_key(), Some(self.client_secret()))
-                            .send()
-                            .await?
-                            .json()
-                            .await?;
-                        result = format!(
-                            "{}\n\n{}\n{}\n{}\n",
-                            result,
-                            var_response.name,
-                            var_response.price,
-                            var_response.stock_quantity.unwrap_or(0)
-                        );
+                if let Some(variations) = product.clone().variations {
+                    if variations.is_empty() {
+                        result.push_str(&format!(
+                            "\n\n{}\n{}\n{}\n",
+                            product.name,
+                            product.price,
+                            product.stock_quantity.unwrap_or(0)
+                        ));
+                    } else {
+                        for variation in &variations {
+                            let uri = format!(
+                                "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
+                                product.id, variation
+                            );
+                            let var_response: findproduct::FindProduct = self
+                                .client
+                                .get(&uri)
+                                .basic_auth(self.client_key(), Some(self.client_secret()))
+                                .send()
+                                .await?
+                                .json()
+                                .await?;
+                            result.push_str(&format!(
+                                "\n\n{}\n{}\n{}\n",
+                                var_response.name,
+                                var_response.price,
+                                var_response.stock_quantity.unwrap_or(0)
+                            ));
+                        }
                     }
                 }
             }
