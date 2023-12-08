@@ -10,6 +10,6 @@ pub struct FindProduct {
     pub price: String,
     pub regular_price: String,
     pub sale_price: String,
-    pub stock_quantity: i64,
+    pub stock_quantity: Option<i64>,
     pub variations: Vec<i64>,
 }

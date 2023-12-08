@@ -371,7 +371,13 @@ impl Woo {
         if !response.is_empty() {
             for product in &response {
                 if product.variations.is_empty() {
-                    result = format!("{result}\n{product:#?}\n");
+                    result = format!(
+                        "{}\n\n{}\n{}\n{}\n",
+                        result,
+                        product.name,
+                        product.price,
+                        product.stock_quantity.unwrap_or(0)
+                    );
                 } else {
                     for variation in &product.variations {
                         let uri = format!(
@@ -386,7 +392,13 @@ impl Woo {
                             .await?
                             .json()
                             .await?;
-                        result = format!("{result}\n{var_response:#?}\n");
+                        result = format!(
+                            "{}\n\n{}\n{}\n{}\n",
+                            result,
+                            var_response.name,
+                            var_response.price,
+                            var_response.stock_quantity.unwrap_or(0)
+                        );
                     }
                 }
             }
