@@ -82,7 +82,7 @@ pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
                 state
                     .woo_client
                     .client()
-                    .put(&uri)
+                    .patch(&uri)
                     .basic_auth(
                         state.woo_client.client_key(),
                         Some(state.woo_client.client_secret()),
@@ -100,7 +100,7 @@ pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
                 state
                     .woo_client
                     .client()
-                    .put(&uri)
+                    .patch(&uri)
                     .basic_auth(
                         state.woo_client.client_key(),
                         Some(state.woo_client.client_secret()),
