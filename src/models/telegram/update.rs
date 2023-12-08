@@ -47,8 +47,15 @@ impl Update {
                                 Some(user) => user.first_name,
                                 None => String::from("Аноним"),
                             };
-                            let msg =
-                                format!("Уважаемый {}, я еще не понимаю такую команду...", author);
+                            let request =
+                                text.clone().split_whitespace().collect::<Vec<&str>>().len();
+                            let msg = match request {
+                                2 => state.woo_client.find_product(&text).await?,
+                                _ => format!(
+                                    "Уважаемый {}, я еще не понимаю такую команду...",
+                                    author
+                                ),
+                            };
                             state.bot.send_message_repl(message.chat.id, &msg).await?;
                             Ok(())
                         }

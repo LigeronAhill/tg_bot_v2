@@ -20,7 +20,7 @@ pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
 
     for s in stock {
         let url = format!(
-            "https://safira.club//wp-json/wc/v3/products?sku={}",
+            "https://safira.club/wp-json/wc/v3/products?sku={}",
             s.sku.clone()
         );
         let response: Vec<serde_json::Value> = state
@@ -51,7 +51,7 @@ pub async fn stock_process(state: &AppState) -> anyhow::Result<()> {
                 product_sku_vec.pop();
                 let sku = product_sku_vec.join("_");
                 let url = format!(
-                    "https://safira.club//wp-json/wc/v3/products?sku={}",
+                    "https://safira.club/wp-json/wc/v3/products?sku={}",
                     sku.clone()
                 );
                 let val: Vec<serde_json::Value> = state

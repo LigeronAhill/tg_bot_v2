@@ -7,6 +7,7 @@ use super::{
     moy_sklad::product::{ProductFromMoySklad, SalePrice},
     AppState,
 };
+pub mod findproduct;
 pub mod product;
 #[derive(Clone)]
 pub struct Woo {
@@ -196,7 +197,7 @@ impl Woo {
     pub async fn get_woo_id(&self, sku: &String) -> Result<i64> {
         let response = self
             .client
-            .get("https://safira.club//wp-json/wc/v3/products")
+            .get("https://safira.club/wp-json/wc/v3/products")
             .query(&[("sku", sku)])
             .basic_auth(self.client_key(), Some(self.client_secret()))
             .send()
@@ -210,7 +211,7 @@ impl Woo {
     }
     pub async fn get_variation_id(&self, product_id: i64, sku: &String) -> Result<i64> {
         let uri = format!(
-            "https://safira.club//wp-json/wc/v3/products/{}/variations",
+            "https://safira.club/wp-json/wc/v3/products/{}/variations",
             product_id
         );
         let response = self
@@ -228,7 +229,7 @@ impl Woo {
         }
     }
     pub async fn get_variations(&self, id: i64) -> Result<Vec<VariationResponse>> {
-        let url = format!("https://safira.club//wp-json/wc/v3/products/{id}/variations");
+        let url = format!("https://safira.club/wp-json/wc/v3/products/{id}/variations");
         let variations: Vec<VariationResponse> = self
             .client
             .get(&url)
@@ -290,7 +291,7 @@ impl Woo {
 
         for variation in &variations {
             let url = format!(
-                "https://safira.club//wp-json/wc/v3/products/{}/variations/{}",
+                "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
                 id, variation.id
             );
             let mut min_quantity = 1.0;
@@ -355,6 +356,42 @@ impl Woo {
                 .await?;
         }
         Ok(())
+    }
+    pub async fn find_product(&self, request: &str) -> Result<String> {
+        let url = format!("https://safira.club/wp-json/wc/v3/products?search={request}");
+        let response: Vec<findproduct::FindProduct> = self
+            .client
+            .get(&url)
+            .basic_auth(self.client_key(), Some(self.client_secret()))
+            .send()
+            .await?
+            .json()
+            .await?;
+        let mut result = String::new();
+        if !response.is_empty() {
+            for product in &response {
+                if product.variations.is_empty() {
+                    result = format!("{result}\n{product:#?}\n");
+                } else {
+                    for variation in &product.variations {
+                        let uri = format!(
+                            "https://safira.club/wp-json/wc/v3/products/{}/variations/{}",
+                            product.id, variation
+                        );
+                        let var_response: findproduct::FindProduct = self
+                            .client
+                            .get(&uri)
+                            .basic_auth(self.client_key(), Some(self.client_secret()))
+                            .send()
+                            .await?
+                            .json()
+                            .await?;
+                        result = format!("{result}\n{var_response:#?}\n");
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
