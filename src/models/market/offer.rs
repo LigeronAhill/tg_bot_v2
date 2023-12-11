@@ -1,9 +1,50 @@
 use serde::Deserialize;
 use serde::Serialize;
+
+use crate::models::woocommerce::product::ProductFromWoo;
+use crate::models::AppState;
+
+use super::MarketClient;
+impl MarketClient {
+    pub async fn update_mapping(&self, state: &AppState) -> anyhow::Result<()> {
+        let uri = format!(
+            "https://api.partner.market.yandex.ru/businesses/{}/offer-mappings/update",
+            self.business_id()
+        );
+        let categories: Vec<i64> = vec![2226];
+        let mut products = vec![];
+        for category in categories {
+            let pr = state.woo_client.products_by_category(category).await?;
+            products.extend(pr)
+        }
+        let update = OfferMappings::from_ms(products);
+        self.client
+            .post(&uri)
+            .bearer_auth(self.token())
+            .json(&update)
+            .send()
+            .await?;
+        Ok(())
+    }
+}
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OfferMappings {
     pub offer_mappings: Vec<UpdateOfferMappingDTO>,
+}
+impl OfferMappings {
+    pub fn from_ms(products: Vec<ProductFromWoo>) -> Self {
+        let mut offer_mappings = vec![];
+        for product in &products {
+            let offer = UpdateOfferDTO::from_ms(product);
+            let uom = UpdateOfferMappingDTO {
+                offer,
+                mapping: None,
+            };
+            offer_mappings.push(uom)
+        }
+        Self { offer_mappings }
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,6 +106,121 @@ pub struct UpdateOfferDTO {
     pub additional_expenses: Option<BasePriceDTO>,
     /// Цена для скидок с Маркетом. Маркет может компенсировать до половины скидки. Назначьте минимальную цену до вычета тарифов, по которой готовы продавать товар, а мы рассчитаем скидку и размер софинансирования. Если Маркет не готов софинансировать скидку, покупатель её не увидит.
     pub cofinance_price: Option<BasePriceDTO>,
+}
+impl UpdateOfferDTO {
+    pub fn from_ms(product: &ProductFromWoo) -> Self {
+        let pictures = match product.clone().images {
+            Some(list) => {
+                let mut res = vec![];
+                for i in &list {
+                    let Some(image) = i.clone().src else {
+                        continue;
+                    };
+                    res.push(image)
+                }
+                res
+            }
+            None => vec![],
+        };
+        let mut vendor = String::new();
+        let mut manufacturer_countries = None;
+        let mut length = 0.0;
+        let mut width = 0.0;
+        let mut height = 0.0;
+        let mut params_vec = vec![];
+        if let Some(attrs) = product.attributes.clone() {
+            for attribute in &attrs {
+                let Some(name) = attribute.name.clone() else {
+                    continue;
+                };
+                if name.as_str() == "Бренд" {
+                    let Some(options) = attribute.options.clone() else {
+                        continue;
+                    };
+                    vendor = options[0].clone();
+                }
+                if name.as_str() == "Страна" {
+                    let Some(options) = attribute.options.clone() else {
+                        continue;
+                    };
+                    manufacturer_countries = Some(vec![options[0].clone()])
+                }
+                if name.as_str() == "Ширина рулона, м" {
+                    let Some(options) = attribute.options.clone() else {
+                        continue;
+                    };
+                    let w: f64 = options[0].parse().unwrap_or(0.0);
+                    width = w * 100.0;
+                    length = 1.0 / width;
+                }
+                if name.as_str() == "Общая толщина, мм" {
+                    let Some(options) = attribute.options.clone() else {
+                        continue;
+                    };
+                    let h: f64 = options[0].parse().unwrap_or(0.0);
+                    height = h / 10.0;
+                }
+                if name.as_str() == "Размер плитки, см" {
+                    let Some(_) = attribute.options.clone() else {
+                        continue;
+                    };
+                    height *= 4.0;
+                    width = 50.0;
+                    length = 50.0;
+                }
+                if let Some(options) = attribute.options.clone() {
+                    let param = OfferParamDTO {
+                        name,
+                        value: options[0].clone(),
+                    };
+                    params_vec.push(param);
+                }
+            }
+        }
+        let w = OfferWeightDimensionsDTO {
+            length,
+            width,
+            height,
+            weight: product
+                .clone()
+                .weight
+                .unwrap_or(String::from("0.0"))
+                .parse()
+                .unwrap(),
+        };
+        Self {
+            offer_id: product.id.to_string(),
+            name: product.name.clone(),
+            category: String::from("Ковролин и ковровая плитка"),
+            pictures,
+            videos: None,
+            vendor,
+            barcodes: None,
+            description: product
+                .clone()
+                .description
+                .unwrap_or("Цена указана за один квадратный метр".to_string()),
+            manufacturer_countries,
+            weight_dimensions: Some(w),
+            vendor_code: product.sku.clone(),
+            tags: None,
+            shelf_life: None,
+            life_time: None,
+            guarantee_period: None,
+            customs_commodity_code: None,
+            certificates: None,
+            box_count: None,
+            condition: None,
+            offer_type: None,
+            downloadable: None,
+            adult: None,
+            age: None,
+            params: Some(params_vec),
+            purchase_price: None,
+            additional_expenses: None,
+            cofinance_price: None,
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

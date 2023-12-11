@@ -43,7 +43,7 @@ async fn axum(
     let bot = tg::Bot::new(&token, &my_tg_id, &safira_group_tg_id);
     let ms_client = MoySklad::new(ms_token).await;
     let woo_client = Woo::new(woo_token_1, woo_token_2).await;
-    let market_client = MarketClient::new(&market_token, &yandex_token);
+    let market_client = MarketClient::new(&market_token, &yandex_token).await;
     let app_state = models::AppState::new(storage, bot, ms_client, woo_client, market_client);
     let state = app_state.clone();
 
@@ -83,6 +83,7 @@ async fn axum(
         loop {
             let _ = sync_events(state.clone()).await;
             let _ = stock_process(&state).await;
+            let _ = state.market_client.update_mapping(&state).await;
             sleep(Duration::from_millis(60000)).await;
         }
     });

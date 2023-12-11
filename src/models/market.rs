@@ -1,11 +1,14 @@
 use chrono::Days;
+
 use chrono::Local;
 use serde::Deserialize;
 use serde::Serialize;
+pub mod catalog;
 pub mod offer;
 pub mod order;
 pub mod order_status;
 pub mod price;
+pub mod shops;
 pub mod stock;
 const FROM_TIME: &str = "10:00";
 const TO_TIME: &str = "21:00";
@@ -14,12 +17,36 @@ const OUTLET: &str = "1";
 pub struct MarketClient {
     token: String,
     check_token: String,
+    client: reqwest::Client,
+    campaign_id: i64,
+    business_id: i64,
 }
 impl MarketClient {
-    pub fn new(token: &str, check_token: &str) -> Self {
+    pub async fn new(token: &str, check_token: &str) -> Self {
+        let client = reqwest::Client::new();
+        let response: shops::CampaignsResponse = client
+            .get("https://api.partner.market.yandex.ru/campaigns")
+            .bearer_auth(token)
+            .send()
+            .await
+            .expect("error getting campaigns")
+            .json()
+            .await
+            .expect("error unmarshaling campaigns");
+        let mut campaign_id: i64 = 0;
+        let mut business_id: i64 = 0;
+        for campaign in &response.campaigns {
+            if campaign.placement_type.as_str() == "DBS" {
+                campaign_id = campaign.id;
+                business_id = campaign.business.id;
+            }
+        }
         Self {
             token: token.to_owned(),
             check_token: check_token.to_owned(),
+            client,
+            campaign_id,
+            business_id,
         }
     }
     pub fn token(&self) -> String {
@@ -27,6 +54,15 @@ impl MarketClient {
     }
     pub fn check_token(&self) -> String {
         self.check_token.clone()
+    }
+    pub fn campaign_id(&self) -> i64 {
+        self.campaign_id
+    }
+    pub fn business_id(&self) -> i64 {
+        self.business_id
+    }
+    pub fn client(&self) -> reqwest::Client {
+        self.client.clone()
     }
 }
 

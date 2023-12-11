@@ -406,6 +406,33 @@ impl Woo {
         }
         Ok(result)
     }
+    pub async fn products_by_category(
+        &self,
+        category_id: i64,
+    ) -> anyhow::Result<Vec<ProductFromWoo>> {
+        let mut page = 1;
+        let uri = format!(
+            "https://safira.club/wp-json/wc/v3/products?page={}&per_page=10&category={}",
+            page, category_id
+        );
+        let mut result = vec![];
+        loop {
+            let response: Vec<ProductFromWoo> = self
+                .client
+                .get(&uri)
+                .basic_auth(self.client_key(), Some(self.client_secret()))
+                .send()
+                .await?
+                .json()
+                .await?;
+            if response.is_empty() {
+                break;
+            }
+            result.extend(response);
+            page += 1;
+        }
+        Ok(result)
+    }
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VariationUpdateRequest {
