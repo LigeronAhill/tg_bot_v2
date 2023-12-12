@@ -77,14 +77,29 @@ async fn axum(
         .route("/api/v1/find/:name", get(get_product_by_name))
         .route("/api/v1/update/:id", put(update_product))
         .route("/api/v1/delete/:id", delete(delete_product))
-        .with_state(app_state);
+        .with_state(app_state.clone());
 
     tokio::spawn(async move {
         loop {
             let _ = sync_events(state.clone()).await;
             let _ = stock_process(&state).await;
-            let _ = state.market_client.update_mapping(&state).await;
             sleep(Duration::from_millis(60000)).await;
+        }
+    });
+    tokio::spawn(async move {
+        loop {
+            let categories: Vec<i64> = vec![2226];
+            let mut products = vec![];
+            for category in categories {
+                if let Ok(pr) = app_state.woo_client.products_by_category(category).await {
+                    products.extend(pr)
+                }
+            }
+            for p in &products {
+                println!("{p:#?}");
+            }
+            let _ = app_state.market_client.update_mapping(products).await;
+            sleep(Duration::from_secs(60)).await;
         }
     });
 

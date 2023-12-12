@@ -23,7 +23,7 @@ pub struct MarketClient {
 }
 impl MarketClient {
     pub async fn new(token: &str, check_token: &str) -> Self {
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().gzip(true).build().unwrap();
         let response: shops::CampaignsResponse = client
             .get("https://api.partner.market.yandex.ru/campaigns")
             .bearer_auth(token)

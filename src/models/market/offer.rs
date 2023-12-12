@@ -2,28 +2,24 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::models::woocommerce::product::ProductFromWoo;
-use crate::models::AppState;
 
 use super::MarketClient;
 impl MarketClient {
-    pub async fn update_mapping(&self, state: &AppState) -> anyhow::Result<()> {
+    pub async fn update_mapping(&self, products: Vec<ProductFromWoo>) -> anyhow::Result<()> {
         let uri = format!(
             "https://api.partner.market.yandex.ru/businesses/{}/offer-mappings/update",
             self.business_id()
         );
-        let categories: Vec<i64> = vec![2226];
-        let mut products = vec![];
-        for category in categories {
-            let pr = state.woo_client.products_by_category(category).await?;
-            products.extend(pr)
-        }
         let update = OfferMappings::from_ms(products);
-        self.client
+        let response = self
+            .client
             .post(&uri)
             .bearer_auth(self.token())
             .json(&update)
             .send()
             .await?;
+        let v = response.json::<serde_json::Value>().await?;
+        println!("{v:#?}");
         Ok(())
     }
 }
